@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Toaster } from "@/components/ui/toaster";
 import { SettingsProvider } from '@/contexts/settings-context';
 import './globals.css';
+import { AuthProvider } from '@/contexts/auth-context';
 
 export const metadata: Metadata = {
   title: 'theBulletinTracker',
@@ -25,9 +26,11 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased h-full">
-        <SettingsProvider>
-            {children}
-        </SettingsProvider>
+        <AuthProvider>
+          <SettingsProvider>
+              {children}
+          </SettingsProvider>
+        </AuthProvider>
         <Toaster />
       </body>
     </html>
