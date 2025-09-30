@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Sparkles, FileText } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateEndOfTripReport } from "@/ai/flows/generate-end-of-trip-report";
 
@@ -65,9 +65,23 @@ export default function EndOfTripDialog({ isOpen, onOpenChange }: EndOfTripDialo
     try {
         const totalHoursWorked = (new Date().getTime() - state.tripStartTime.getTime()) / (1000 * 60 * 60);
 
+        const completedStops = state.history.filter(event => event.timeOut).map(event => {
+          const stop = state.itinerary.find(s => s.id === event.stopId);
+          return {
+            propertyName: event.propertyName,
+            address: stop?.address || 'N/A',
+            timeIn: event.timeIn.toISOString(),
+            timeOut: event.timeOut!.toISOString(),
+            status: event.status || 'N/A',
+            notes: event.notes || 'No notes.',
+          }
+        });
+
         const reportInput = {
             ...values,
             totalHoursWorked: parseFloat(totalHoursWorked.toFixed(2)),
+            numberOfStops: completedStops.length,
+            stops: completedStops,
         };
 
         const result = await generateEndOfTripReport(reportInput);
