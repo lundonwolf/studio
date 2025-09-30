@@ -2,6 +2,7 @@
 
 import { useContext } from "react";
 import { TripContext } from "@/contexts/trip-context";
+import { SettingsContext } from "@/contexts/settings-context";
 
 export const useTrip = () => {
   const context = useContext(TripContext);

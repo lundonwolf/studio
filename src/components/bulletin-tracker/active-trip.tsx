@@ -4,15 +4,15 @@ import { useState } from "react";
 import { useTrip } from "@/hooks/use-trip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { LogIn, LogOut, MapPin, Wifi, Info, Clipboard, ChevronRight, CheckCircle2 } from "lucide-react";
+import { LogIn, MapPin, Wifi, Info, Clipboard, ChevronRight, CheckCircle2 } from "lucide-react";
 import EndOfTripDialog from "./end-of-trip-dialog";
+import { CheckOutDialog } from "./checkout-dialog";
 
 export function ActiveTrip() {
   const { state, dispatch } = useTrip();
-  const { itinerary, activeStopIndex, history } = state;
-  const [notes, setNotes] = useState("");
+  const { itinerary, activeStopIndex } = state;
   const [isEndTripDialogOpen, setEndTripDialogOpen] = useState(false);
+  const [isCheckOutDialogOpen, setCheckOutDialogOpen] = useState(false);
 
   if (activeStopIndex === null && itinerary.length > 0) {
     return (
@@ -29,16 +29,11 @@ export function ActiveTrip() {
   const currentStop = activeStopIndex !== null ? itinerary[activeStopIndex] : null;
   if (!currentStop) return null;
 
-  const currentEvent = history.find(e => e.stopId === currentStop.id && e.timeOut === null);
+  const currentEvent = state.history.find(e => e.stopId === currentStop.id && e.timeOut === null);
   const isCheckedIn = !!currentEvent;
 
   const handleCheckIn = () => {
     dispatch({ type: "CHECK_IN", payload: { stopId: currentStop.id } });
-  };
-
-  const handleCheckOut = () => {
-    dispatch({ type: "CHECK_OUT", payload: { notes } });
-    setNotes("");
   };
 
   return (
@@ -61,21 +56,9 @@ export function ActiveTrip() {
               <LogIn className="mr-2 h-4 w-4" /> Check-in
             </Button>
           ) : (
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="tech-notes" className="font-semibold text-sm">Tech Notes</label>
-                <Textarea
-                  id="tech-notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Add any notes about this visit..."
-                  className="mt-1"
-                />
-              </div>
-              <Button onClick={handleCheckOut} className="w-full">
-                <LogOut className="mr-2 h-4 w-4" /> Check-out
-              </Button>
-            </div>
+            <Button onClick={() => setCheckOutDialogOpen(true)} className="w-full">
+              Check-out
+            </Button>
           )}
         </CardContent>
       </Card>
@@ -107,6 +90,7 @@ export function ActiveTrip() {
       )}
 
       <EndOfTripDialog isOpen={isEndTripDialogOpen} onOpenChange={setEndTripDialogOpen} />
+      {currentStop && <CheckOutDialog stopId={currentStop.id} isOpen={isCheckOutDialogOpen} onOpenChange={setCheckOutDialogOpen} />}
     </div>
   );
 }

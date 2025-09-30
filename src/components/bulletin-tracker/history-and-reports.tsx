@@ -18,9 +18,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { History, FileText, Loader2 } from "lucide-react";
+import { History, FileText, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { generateLocationReport } from "@/ai/flows/generate-location-report";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -30,6 +31,7 @@ import {
   DialogTitle,
   DialogDescription
 } from "@/components/ui/dialog";
+import type { CheckOutStatus } from "@/lib/types";
 
 function formatDuration(start: Date, end: Date | null): string {
   if (!end) return "In Progress";
@@ -37,8 +39,21 @@ function formatDuration(start: Date, end: Date | null): string {
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
-  return `${hours}h ${remainingMinutes}m`;
+  if (hours > 0) {
+    return `${hours}h ${remainingMinutes}m`;
+  }
+  return `${remainingMinutes}m`;
 }
+
+function StatusIndicator({ status }: { status: CheckOutStatus | undefined }) {
+    if (!status) return null;
+
+    if (status === 'Successful') {
+        return <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white"><CheckCircle size={14} className="mr-1"/> Successful</Badge>
+    }
+    return <Badge variant="destructive"><XCircle size={14} className="mr-1"/> Not Successful</Badge>
+}
+
 
 export function HistoryAndReports() {
   const { state } = useTrip();
@@ -102,24 +117,25 @@ export function HistoryAndReports() {
             <TableHeader>
               <TableRow>
                 <TableHead>Location</TableHead>
-                <TableHead>Check-in</TableHead>
-                <TableHead>Check-out</TableHead>
                 <TableHead>Duration</TableHead>
+                <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {history.length > 0 ? (
-                history.map((event) => (
+                history.toReversed().map((event) => (
                   <TableRow key={event.stopId}>
-                    <TableCell className="font-medium">{event.propertyName}</TableCell>
-                    <TableCell>{new Date(event.timeIn).toLocaleTimeString()}</TableCell>
-                    <TableCell>{event.timeOut ? new Date(event.timeOut).toLocaleTimeString() : "..."}</TableCell>
+                    <TableCell className="font-medium">
+                        <div>{event.propertyName}</div>
+                        <div className="text-xs text-muted-foreground">{new Date(event.timeIn).toLocaleTimeString()} - {event.timeOut ? new Date(event.timeOut).toLocaleTimeString() : "..."}</div>
+                    </TableCell>
                     <TableCell>{formatDuration(event.timeIn, event.timeOut)}</TableCell>
+                    <TableCell><StatusIndicator status={event.status} /></TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center">
+                  <TableCell colSpan={3} className="text-center">
                     {tripStartTime ? "No check-ins yet." : "Trip has not started."}
                   </TableCell>
                 </TableRow>
@@ -129,7 +145,7 @@ export function HistoryAndReports() {
         </ScrollArea>
       </CardContent>
       <CardFooter>
-        <Button onClick={handleGenerateReport} disabled={history.length === 0 || isLoading} className="w-full">
+        <Button onClick={handleGenerateReport} disabled={history.filter(h => h.timeOut).length === 0 || isLoading} className="w-full">
           {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
           Generate Location Report
         </Button>

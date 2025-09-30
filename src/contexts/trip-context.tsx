@@ -1,18 +1,18 @@
 "use client";
 
-import { createContext, useReducer, ReactNode, Dispatch } from "react";
-import type { Stop, CheckInEvent, TripStatus } from "@/lib/types";
-import { availableStops } from "@/lib/data";
+import { createContext, useReducer, ReactNode, Dispatch, useContext } from "react";
+import type { Stop, CheckInEvent, TripStatus, CheckOutStatus } from "@/lib/types";
+import { SettingsContext } from "./settings-context";
 
 type State = {
   tripStatus: TripStatus;
-  allStops: Stop[];
   itinerary: Stop[];
   activeStopIndex: number | null;
   history: CheckInEvent[];
   currentLocation: { latitude: number; longitude: number } | null;
   tripStartTime: Date | null;
   endOfTripReport: string | null;
+  allStops: Stop[];
 };
 
 type Action =
@@ -20,14 +20,14 @@ type Action =
   | { type: "REMOVE_FROM_ITINERARY"; payload: string }
   | { type: "START_TRIP" }
   | { type: "CHECK_IN"; payload: { stopId: string } }
-  | { type: "CHECK_OUT"; payload: { notes: string } }
+  | { type: "CHECK_OUT"; payload: { notes: string; status: CheckOutStatus; reason: string } }
   | { type: "SET_CURRENT_LOCATION"; payload: { latitude: number; longitude: number } }
   | { type: "END_TRIP"; payload: { report: string } }
-  | { type: "RESET_TRIP" };
+  | { type: "RESET_TRIP" }
+  | { type: 'SET_STOPS', payload: Stop[] };
 
-const initialState: State = {
+const initialState: Omit<State, 'allStops'> = {
   tripStatus: "planning",
-  allStops: availableStops,
   itinerary: [],
   activeStopIndex: null,
   history: [],
@@ -38,6 +38,11 @@ const initialState: State = {
 
 function tripReducer(state: State, action: Action): State {
   switch (action.type) {
+    case 'SET_STOPS':
+      return {
+        ...state,
+        allStops: action.payload,
+      };
     case "ADD_TO_ITINERARY":
       if (state.itinerary.find(stop => stop.id === action.payload.id)) {
         return state;
@@ -48,7 +53,7 @@ function tripReducer(state: State, action: Action): State {
       return { ...state, itinerary: state.itinerary.filter(stop => stop.id !== action.payload) };
 
     case "START_TRIP":
-      if (state.itinerary.length === 0) return state;
+      if (state.itinerary.length === 0) return { ...state };
       return {
         ...state,
         tripStatus: "active",
@@ -69,7 +74,6 @@ function tripReducer(state: State, action: Action): State {
         propertyName: stop.propertyName,
         timeIn: new Date(),
         timeOut: null,
-        notes: "",
         coordinates: stop.coordinates,
       };
       
@@ -88,7 +92,7 @@ function tripReducer(state: State, action: Action): State {
 
         const updatedHistory = state.history.map(event =>
             event.stopId === currentStop.id && event.timeOut === null
-                ? { ...event, timeOut: new Date(), notes: action.payload.notes }
+                ? { ...event, timeOut: new Date(), notes: action.payload.notes, status: action.payload.status, reason: action.payload.reason }
                 : event
         );
 
@@ -109,6 +113,7 @@ function tripReducer(state: State, action: Action): State {
 
     case "RESET_TRIP":
       return {
+        ...state,
         ...initialState,
         itinerary: [],
       };
@@ -118,13 +123,36 @@ function tripReducer(state: State, action: Action): State {
   }
 }
 
-export const TripContext = createContext<{ state: State; dispatch: Dispatch<Action> } | undefined>(undefined);
+export const TripContext = createContext<{
+    state: State;
+    dispatch: Dispatch<Action>;
+} | undefined>(undefined);
+
 
 export function TripProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(tripReducer, initialState);
+  const settingsContext = useContext(SettingsContext);
+  if (!settingsContext) {
+    throw new Error("TripProvider must be used within a SettingsProvider");
+  }
+  const { state: settingsState } = settingsContext;
+
+  const combinedInitialState = {
+    ...initialState,
+    allStops: settingsState.stops,
+  };
+
+  const [state, dispatch] = useReducer(tripReducer, combinedInitialState);
+  
+  const value = {
+      state: {
+          ...state,
+          allStops: settingsState.stops, // Always use the latest stops from settings
+      },
+      dispatch
+  };
 
   return (
-    <TripContext.Provider value={{ state, dispatch }}>
+    <TripContext.Provider value={value}>
       {children}
     </TripContext.Provider>
   );

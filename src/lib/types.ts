@@ -19,12 +19,16 @@ export type Stop = {
   };
 };
 
+export type CheckOutStatus = "Successful" | "Not Successful";
+
 export type CheckInEvent = {
   stopId: string;
   propertyName: string;
   timeIn: Date;
   timeOut: Date | null;
   notes?: string;
+  status?: CheckOutStatus;
+  reason?: string;
   coordinates: {
     latitude: number;
     longitude: number;
@@ -32,3 +36,8 @@ export type CheckInEvent = {
 };
 
 export type TripStatus = "idle" | "planning" | "active" | "ended";
+
+export type CheckoutReason = {
+    id: string;
+    text: string;
+}

@@ -10,9 +10,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileText, RotateCcw } from "lucide-react";
+import { useEffect } from "react";
+import { useSettings } from "@/hooks/use-settings";
 
 export default function Dashboard() {
   const { state, dispatch } = useTrip();
+  const { state: settingsState } = useSettings();
+
+   useEffect(() => {
+    dispatch({ type: 'SET_STOPS', payload: settingsState.stops });
+  }, [settingsState.stops, dispatch]);
 
   const renderTripState = () => {
     switch (state.tripStatus) {

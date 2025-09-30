@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Toaster } from "@/components/ui/toaster";
+import { SettingsProvider } from '@/contexts/settings-context';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -23,7 +24,9 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased h-full">
-        {children}
+        <SettingsProvider>
+            {children}
+        </SettingsProvider>
         <Toaster />
       </body>
     </html>
