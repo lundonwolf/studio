@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateEndOfTripReport } from "@/ai/flows/generate-end-of-trip-report";
+import { haversineDistance } from "@/lib/utils";
 
 const formSchema = z.object({
   mileage: z.coerce.number().min(0, "Mileage must be a positive number."),
@@ -54,6 +55,16 @@ export default function EndOfTripDialog({ isOpen, onOpenChange }: EndOfTripDialo
       technicianNotes: "",
     },
   });
+
+  useEffect(() => {
+    if (isOpen && state.tripStatus === 'active') {
+      let totalDistance = 0;
+      for (let i = 0; i < state.locationHistory.length - 1; i++) {
+        totalDistance += haversineDistance(state.locationHistory[i], state.locationHistory[i+1]);
+      }
+      form.setValue('mileage', parseFloat(totalDistance.toFixed(2)));
+    }
+  }, [isOpen, state.tripStatus, state.locationHistory, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!state.tripStartTime) {
@@ -124,7 +135,7 @@ export default function EndOfTripDialog({ isOpen, onOpenChange }: EndOfTripDialo
               name="mileage"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Total Mileage</FormLabel>
+                  <FormLabel>Total Mileage (auto-calculated)</FormLabel>
                   <FormControl>
                     <Input type="number" placeholder="e.g., 55" {...field} />
                   </FormControl>

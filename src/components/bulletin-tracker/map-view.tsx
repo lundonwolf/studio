@@ -7,28 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Compass, LocateFixed, Waypoints } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { haversineDistance } from "@/lib/utils";
 
-const GEOFENCE_RADIUS_METERS = 100;
-
-function haversineDistance(coords1, coords2) {
-  function toRad(x) {
-    return x * Math.PI / 180;
-  }
-
-  const R = 6371e3; // metres
-  const φ1 = toRad(coords1.latitude);
-  const φ2 = toRad(coords2.latitude);
-  const Δφ = toRad(coords2.latitude - coords1.latitude);
-  const Δλ = toRad(coords2.longitude - coords1.longitude);
-
-  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-            Math.cos(φ1) * Math.cos(φ2) *
-            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
-}
-
+const GEOFENCE_RADIUS_METERS = 100; // in meters, haversineDistance now returns miles
 
 export function MapView() {
   const { state, dispatch } = useTrip();
@@ -49,7 +30,8 @@ export function MapView() {
       },
       (error) => {
         console.error("Error getting location:", error);
-      }
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
@@ -64,9 +46,10 @@ export function MapView() {
     const isCheckedIn = history.some(h => h.stopId === currentStop.id && h.timeOut === null);
     if(isCheckedIn) return;
 
-    const distance = haversineDistance(currentLocation, currentStop.coordinates);
+    const distanceInMiles = haversineDistance(currentLocation, currentStop.coordinates);
+    const distanceInMeters = distanceInMiles * 1609.34;
 
-    if (distance <= GEOFENCE_RADIUS_METERS) {
+    if (distanceInMeters <= GEOFENCE_RADIUS_METERS) {
       toast({
         title: "You've arrived!",
         description: `You are near ${currentStop.propertyName}. Don't forget to check in.`,

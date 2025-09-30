@@ -43,3 +43,8 @@ export type CheckoutReason = {
     id: string;
     text: string;
 }
+
+export type Coordinates = {
+    latitude: number;
+    longitude: number;
+};

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useReducer, ReactNode, Dispatch, useContext } from "react";
-import type { Stop, CheckInEvent, TripStatus, CheckOutStatus } from "@/lib/types";
+import type { Stop, CheckInEvent, TripStatus, CheckOutStatus, Coordinates } from "@/lib/types";
 import { SettingsContext } from "./settings-context";
 
 type State = {
@@ -9,10 +9,11 @@ type State = {
   itinerary: Stop[];
   activeStopIndex: number | null;
   history: CheckInEvent[];
-  currentLocation: { latitude: number; longitude: number } | null;
+  currentLocation: Coordinates | null;
   tripStartTime: Date | null;
   endOfTripReport: string | null;
   allStops: Stop[];
+  locationHistory: Coordinates[];
 };
 
 type Action =
@@ -21,7 +22,7 @@ type Action =
   | { type: "START_TRIP" }
   | { type: "CHECK_IN"; payload: { stopId: string } }
   | { type: "CHECK_OUT"; payload: { notes: string; status: CheckOutStatus; reason: string } }
-  | { type: "SET_CURRENT_LOCATION"; payload: { latitude: number; longitude: number } }
+  | { type: "SET_CURRENT_LOCATION"; payload: Coordinates }
   | { type: "END_TRIP"; payload: { report: string } }
   | { type: "RESET_TRIP" }
   | { type: 'SET_STOPS', payload: Stop[] };
@@ -34,6 +35,7 @@ const initialState: Omit<State, 'allStops'> = {
   currentLocation: null,
   tripStartTime: null,
   endOfTripReport: null,
+  locationHistory: [],
 };
 
 function tripReducer(state: State, action: Action): State {
@@ -61,6 +63,7 @@ function tripReducer(state: State, action: Action): State {
         activeStopIndex: 0,
         history: [],
         endOfTripReport: null,
+        locationHistory: state.currentLocation ? [state.currentLocation] : [],
       };
 
     case "CHECK_IN": {
@@ -106,16 +109,20 @@ function tripReducer(state: State, action: Action): State {
     }
 
     case "SET_CURRENT_LOCATION":
-      return { ...state, currentLocation: action.payload };
+      const newLocationHistory = state.tripStatus === 'active' 
+        ? [...state.locationHistory, action.payload]
+        : state.locationHistory;
+      return { ...state, currentLocation: action.payload, locationHistory: newLocationHistory };
 
     case "END_TRIP":
-      return { ...state, tripStatus: "ended", endOfTripReport: action.payload.report };
+      return { ...state, tripStatus: "ended", endOfTripReport: action.payload.report, locationHistory: [] };
 
     case "RESET_TRIP":
       return {
         ...state,
         ...initialState,
         itinerary: [],
+        locationHistory: [],
       };
 
     default:
