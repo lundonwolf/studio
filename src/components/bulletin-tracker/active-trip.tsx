@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useTrip } from "@/hooks/use-trip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogIn, MapPin, Wifi, Info, Clipboard, ChevronRight, CheckCircle2, Hdd } from "lucide-react";
+import { LogIn, MapPin, Wifi, Info, Clipboard, ChevronRight, CheckCircle2, HardDrive } from "lucide-react";
 import EndOfTripDialog from "./end-of-trip-dialog";
 import { CheckOutDialog } from "./checkout-dialog";
 import {
@@ -69,7 +69,7 @@ export function ActiveTrip() {
 
           <div className="flex items-center gap-2 text-muted-foreground"><MapPin size={16} /> {currentStop.address}</div>
           <div className="flex items-center gap-2 text-muted-foreground"><Clipboard size={16} /> Screen ID: {currentStop.screenId}</div>
-          {currentStop.macAddress && <div className="flex items-center gap-2 text-muted-foreground"><Hdd size={16} /> MAC: {currentStop.macAddress}</div>}
+          {currentStop.macAddress && <div className="flex items-center gap-2 text-muted-foreground"><HardDrive size={16} /> MAC: {currentStop.macAddress}</div>}
           <div className="flex items-center gap-2 text-muted-foreground"><Wifi size={16} /> Wi-Fi: {currentStop.wifiSsid}</div>
           <div className="p-3 bg-secondary/50 rounded-lg">
             <h4 className="font-semibold flex items-center gap-2"><Info size={16} /> Tech Instructions</h4>
