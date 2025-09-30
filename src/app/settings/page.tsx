@@ -10,6 +10,93 @@ import { Trash2, PlusCircle, Edit, Save, X, ArrowLeft } from "lucide-react";
 import type { CheckoutReason, Stop } from '@/lib/types';
 import Link from 'next/link';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+
+const LocationForm = ({
+  stop,
+  onSave,
+  onCancel,
+  onChange,
+  isAdding,
+}: {
+  stop: Partial<Stop>,
+  onSave: () => void,
+  onCancel: () => void,
+  onChange: (stop: Partial<Stop>) => void,
+  isAdding?: boolean,
+}) => {
+  const handleChange = (field: keyof Stop, value: any) => {
+    onChange({ ...stop, [field]: value });
+  };
+  const handleContactChange = (field: keyof Stop['contact'], value: any) => {
+    onChange({ ...stop, contact: { ...stop.contact, [field]: value } });
+  };
+  const handleImageGalleryChange = (value: string) => {
+    onChange({ ...stop, imageGallery: value.split(',').map(url => url.trim()) });
+  };
+
+  return (
+    <div className="p-3 border-dashed border-2 rounded-lg space-y-2">
+       <Accordion type="multiple" defaultValue={['location', 'connection', 'contact', 'instructions', 'gallery']} className="w-full">
+        <AccordionItem value="location">
+          <AccordionTrigger>Location Details</AccordionTrigger>
+          <AccordionContent className="space-y-2 px-1">
+            <Label>Property Name</Label>
+            <Input placeholder="e.g., Downtown Mall" value={stop.propertyName || ''} onChange={e => handleChange('propertyName', e.target.value)} />
+            <Label>Address</Label>
+            <Input placeholder="e.g., 123 Main St" value={stop.address || ''} onChange={e => handleChange('address', e.target.value)} />
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="connection">
+          <AccordionTrigger>Connection Details</AccordionTrigger>
+          <AccordionContent className="space-y-2 px-1">
+            <Label>Screen ID</Label>
+            <Input placeholder="e.g., DM-ENT-01" value={stop.screenId || ''} onChange={e => handleChange('screenId', e.target.value)} />
+            <Label>MAC Address</Label>
+            <Input placeholder="e.g., 00:1A:2B:3C:4D:5E" value={stop.macAddress || ''} onChange={e => handleChange('macAddress', e.target.value)} />
+            <Label>Wi-Fi SSID</Label>
+            <Input placeholder="e.g., MallGuestWiFi" value={stop.wifiSsid || ''} onChange={e => handleChange('wifiSsid', e.target.value)} />
+            <Label>Wi-Fi Password</Label>
+            <Input placeholder="e.g., supersecret" value={stop.wifiPassword || ''} onChange={e => handleChange('wifiPassword', e.target.value)} />
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="contact">
+          <AccordionTrigger>Contact Details</AccordionTrigger>
+          <AccordionContent className="space-y-2 px-1">
+            <Label>Contact Name</Label>
+            <Input placeholder="e.g., John Doe" value={stop.contact?.name || ''} onChange={e => handleContactChange('name', e.target.value)} />
+            <Label>Contact Email</Label>
+            <Input placeholder="e.g., john@example.com" value={stop.contact?.email || ''} onChange={e => handleContactChange('email', e.target.value)} />
+            <Label>Contact Phone</Label>
+            <Input placeholder="e.g., 555-123-4567" value={stop.contact?.phone || ''} onChange={e => handleContactChange('phone', e.target.value)} />
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="instructions">
+          <AccordionTrigger>Tech Instructions</AccordionTrigger>
+          <AccordionContent className="px-1">
+             <Textarea placeholder="e.g., Screen is by the food court." value={stop.techInstructions || ''} onChange={e => handleChange('techInstructions', e.target.value)} />
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="gallery">
+          <AccordionTrigger>Image Gallery</AccordionTrigger>
+          <AccordionContent className="px-1">
+            <Textarea placeholder="e.g., https://example.com/image1.jpg, https://example.com/image2.jpg" value={stop.imageGallery?.join(', ') || ''} onChange={e => handleImageGalleryChange(e.target.value)} />
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+
+      <div className="flex gap-2 pt-4">
+        <Button size="sm" onClick={onSave}><Save size={16}/> {isAdding ? 'Add Stop' : 'Save'}</Button>
+        <Button size="sm" variant="ghost" onClick={onCancel}><X size={16}/> Cancel</Button>
+      </div>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const { state, dispatch } = useSettings();
@@ -17,7 +104,10 @@ export default function SettingsPage() {
 
   // Locations state
   const [editingStop, setEditingStop] = useState<Stop | null>(null);
-  const [newStop, setNewStop] = useState<Partial<Stop>>({});
+  const [newStop, setNewStop] = useState<Partial<Stop>>({
+    contact: { name: '', email: '', phone: '' },
+    imageGallery: [],
+  });
   const [isAddingStop, setIsAddingStop] = useState(false);
 
   // Reasons state
@@ -50,10 +140,10 @@ export default function SettingsPage() {
         wifiPassword: newStop.wifiPassword || '',
         macAddress: newStop.macAddress || '',
         techInstructions: newStop.techInstructions || '',
-        imageGallery: (newStop.imageGallery as unknown as string)?.split(',').map(url => url.trim()).filter(url => url) || [],
+        imageGallery: newStop.imageGallery?.filter(url => url) || [],
       };
     dispatch({ type: 'ADD_STOP', payload: stopToAdd });
-    setNewStop({});
+    setNewStop({ contact: { name: '', email: '', phone: '' }, imageGallery: [] });
     setIsAddingStop(false);
   };
 
@@ -94,35 +184,12 @@ export default function SettingsPage() {
             {stops.map(stop => (
               <div key={stop.id} className="p-3 bg-secondary/50 rounded-lg space-y-2">
                 {editingStop?.id === stop.id ? (
-                  <div className="space-y-2">
-                    <Label>Property Name</Label>
-                    <Input value={editingStop.propertyName} onChange={e => setEditingStop({...editingStop, propertyName: e.target.value})} />
-                    <Label>Address</Label>
-                    <Input value={editingStop.address} onChange={e => setEditingStop({...editingStop, address: e.target.value})} />
-                    <Label>Screen ID</Label>
-                    <Input value={editingStop.screenId} onChange={e => setEditingStop({...editingStop, screenId: e.target.value})} />
-                    <Label>MAC Address</Label>
-                    <Input value={editingStop.macAddress} onChange={e => setEditingStop({...editingStop, macAddress: e.target.value})} />
-                    <Label>Wi-Fi SSID</Label>
-                    <Input value={editingStop.wifiSsid} onChange={e => setEditingStop({...editingStop, wifiSsid: e.target.value})} />
-                    <Label>Wi-Fi Password</Label>
-                    <Input value={editingStop.wifiPassword} onChange={e => setEditingStop({...editingStop, wifiPassword: e.target.value})} />
-                    <Label>Contact Name</Label>
-                    <Input value={editingStop.contact.name} onChange={e => setEditingStop({...editingStop, contact: {...editingStop.contact, name: e.target.value}})} />
-                    <Label>Contact Email</Label>
-                    <Input value={editingStop.contact.email} onChange={e => setEditingStop({...editingStop, contact: {...editingStop.contact, email: e.target.value}})} />
-                    <Label>Contact Phone</Label>
-                    <Input value={editingStop.contact.phone} onChange={e => setEditingStop({...editingStop, contact: {...editingStop.contact, phone: e.target.value}})} />
-                    <Label>Tech Instructions</Label>
-                    <Textarea value={editingStop.techInstructions} onChange={e => setEditingStop({...editingStop, techInstructions: e.target.value})} />
-                    <Label>Image Gallery (comma-separated URLs)</Label>
-                    <Textarea value={editingStop.imageGallery?.join(', ')} onChange={e => setEditingStop({...editingStop, imageGallery: e.target.value.split(',').map(url => url.trim())})} />
-
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={handleSaveStop}><Save size={16}/> Save</Button>
-                      <Button size="sm" variant="ghost" onClick={() => setEditingStop(null)}><X size={16}/> Cancel</Button>
-                    </div>
-                  </div>
+                    <LocationForm 
+                        stop={editingStop}
+                        onSave={handleSaveStop}
+                        onCancel={() => setEditingStop(null)}
+                        onChange={(updatedStop) => setEditingStop(updatedStop as Stop)}
+                    />
                 ) : (
                   <div className="flex justify-between items-start">
                     <div>
@@ -140,35 +207,13 @@ export default function SettingsPage() {
               </div>
             ))}
             {isAddingStop ? (
-                <div className="p-3 border-dashed border-2 rounded-lg space-y-2">
-                    <Label>Property Name</Label>
-                    <Input placeholder="e.g., Downtown Mall" value={newStop.propertyName || ''} onChange={e => setNewStop({...newStop, propertyName: e.target.value})} />
-                    <Label>Address</Label>
-                    <Input placeholder="e.g., 123 Main St" value={newStop.address || ''} onChange={e => setNewStop({...newStop, address: e.target.value})} />
-                    <Label>Screen ID</Label>
-                    <Input placeholder="e.g., DM-ENT-01" value={newStop.screenId || ''} onChange={e => setNewStop({...newStop, screenId: e.target.value})} />
-                    <Label>MAC Address</Label>
-                    <Input placeholder="e.g., 00:1A:2B:3C:4D:5E" value={newStop.macAddress || ''} onChange={e => setNewStop({...newStop, macAddress: e.target.value})} />
-                    <Label>Wi-Fi SSID</Label>
-                    <Input placeholder="e.g., MallGuestWiFi" value={newStop.wifiSsid || ''} onChange={e => setNewStop({...newStop, wifiSsid: e.target.value})} />
-                    <Label>Wi-Fi Password</Label>
-                    <Input placeholder="e.g., supersecret" value={newStop.wifiPassword || ''} onChange={e => setNewStop({...newStop, wifiPassword: e.target.value})} />
-                    <Label>Contact Name</Label>
-                    <Input placeholder="e.g., John Doe" value={newStop.contact?.name || ''} onChange={e => setNewStop({...newStop, contact: {...newStop.contact, name: e.target.value}})} />
-                    <Label>Contact Email</Label>
-                    <Input placeholder="e.g., john@example.com" value={newStop.contact?.email || ''} onChange={e => setNewStop({...newStop, contact: {...newStop.contact, email: e.target.value}})} />
-                    <Label>Contact Phone</Label>
-                    <Input placeholder="e.g., 555-123-4567" value={newStop.contact?.phone || ''} onChange={e => setNewStop({...newStop, contact: {...newStop.contact, phone: e.target.value}})} />
-                    <Label>Tech Instructions</Label>
-                    <Textarea placeholder="e.g., Screen is by the food court." value={newStop.techInstructions || ''} onChange={e => setNewStop({...newStop, techInstructions: e.target.value})} />
-                    <Label>Image Gallery (comma-separated URLs)</Label>
-                    <Textarea placeholder="e.g., https://example.com/image1.jpg, https://example.com/image2.jpg" value={newStop.imageGallery as unknown as string || ''} onChange={e => setNewStop({...newStop, imageGallery: e.target.value as any})} />
-
-                    <div className="flex gap-2">
-                        <Button size="sm" onClick={handleAddStop}><Save size={16}/> Add Stop</Button>
-                        <Button size="sm" variant="ghost" onClick={() => setIsAddingStop(false)}><X size={16}/> Cancel</Button>
-                    </div>
-                </div>
+                <LocationForm 
+                    stop={newStop}
+                    onSave={handleAddStop}
+                    onCancel={() => setIsAddingStop(false)}
+                    onChange={setNewStop}
+                    isAdding
+                />
             ) : (
                 <Button onClick={() => setIsAddingStop(true)} className="w-full" variant="outline">
                     <PlusCircle className="mr-2 h-4 w-4"/> Add New Location
