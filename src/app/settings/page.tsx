@@ -7,12 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Trash2, PlusCircle, Edit, Save, X, ArrowLeft } from "lucide-react";
-import type { Stop } from '@/lib/types';
+import type { CheckoutReason, Stop } from '@/lib/types';
 import Link from 'next/link';
 
 export default function SettingsPage() {
   const { state, dispatch } = useSettings();
-  const { stops, reasons } = state;
+  const { stops, reasons, successfulReasons } = state;
 
   // Locations state
   const [editingStop, setEditingStop] = useState<Stop | null>(null);
@@ -21,6 +21,7 @@ export default function SettingsPage() {
 
   // Reasons state
   const [newReason, setNewReason] = useState("");
+  const [newSuccessfulReason, setNewSuccessfulReason] = useState("");
 
   // Handlers for Locations
   const handleEditStop = (stop: Stop) => {
@@ -60,6 +61,13 @@ export default function SettingsPage() {
     }
   };
 
+  const handleAddSuccessfulReason = () => {
+    if (newSuccessfulReason.trim()) {
+      dispatch({ type: "ADD_SUCCESSFUL_REASON", payload: { text: newSuccessfulReason.trim() } });
+      setNewSuccessfulReason("");
+    }
+  };
+
   return (
     <div className="container mx-auto p-4 md:p-8">
         <div className="flex items-center gap-4 mb-8">
@@ -71,9 +79,9 @@ export default function SettingsPage() {
             <h1 className="text-3xl font-bold">Settings</h1>
         </div>
 
-      <div className="grid gap-8 md:grid-cols-2">
+      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
         {/* Manage Locations */}
-        <Card>
+        <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Manage Locations</CardTitle>
             <CardDescription>Add, edit, or remove service stops.</CardDescription>
@@ -136,10 +144,37 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Manage Checkout Reasons */}
+        {/* Manage Successful Checkout Reasons */}
         <Card>
           <CardHeader>
-            <CardTitle>Manage Checkout Reasons</CardTitle>
+            <CardTitle>Successful Reasons</CardTitle>
+            <CardDescription>Customize reasons for "Successful" check-outs.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {successfulReasons.map(reason => (
+              <div key={reason.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                <p>{reason.text}</p>
+                <Button size="icon" variant="ghost" onClick={() => dispatch({ type: "DELETE_SUCCESSFUL_REASON", payload: reason.id })}>
+                  <Trash2 className="h-5 w-5 text-destructive" />
+                </Button>
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <Input
+                value={newSuccessfulReason}
+                onChange={e => setNewSuccessfulReason(e.target.value)}
+                placeholder="Add a new reason"
+                onKeyUp={(e) => e.key === 'Enter' && handleAddSuccessfulReason()}
+              />
+              <Button onClick={handleAddSuccessfulReason}><PlusCircle className="h-5 w-5"/></Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Manage Not Successful Checkout Reasons */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Not Successful Reasons</CardTitle>
             <CardDescription>Customize reasons for "Not Successful" check-outs.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

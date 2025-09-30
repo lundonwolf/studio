@@ -3,11 +3,12 @@
 import { createContext, useReducer, ReactNode, Dispatch } from "react";
 import type { Stop, CheckoutReason } from "@/lib/types";
 import { availableStops } from "@/lib/data";
-import { defaultReasons } from "@/lib/reasons";
+import { defaultReasons, defaultSuccessfulReasons } from "@/lib/reasons";
 
 type State = {
   stops: Stop[];
   reasons: CheckoutReason[];
+  successfulReasons: CheckoutReason[];
 };
 
 type Action =
@@ -15,11 +16,14 @@ type Action =
   | { type: "UPDATE_STOP"; payload: Stop }
   | { type: "DELETE_STOP"; payload: string }
   | { type: "ADD_REASON"; payload: { text: string } }
-  | { type: "DELETE_REASON"; payload: string };
+  | { type: "DELETE_REASON"; payload: string }
+  | { type: "ADD_SUCCESSFUL_REASON"; payload: { text: string } }
+  | { type: "DELETE_SUCCESSFUL_REASON"; payload: string };
 
 const initialState: State = {
   stops: availableStops,
   reasons: defaultReasons,
+  successfulReasons: defaultSuccessfulReasons,
 };
 
 function settingsReducer(state: State, action: Action): State {
@@ -54,6 +58,18 @@ function settingsReducer(state: State, action: Action): State {
         ...state,
         reasons: state.reasons.filter(reason => reason.id !== action.payload),
       };
+    case "ADD_SUCCESSFUL_REASON": {
+        const newReason: CheckoutReason = {
+            id: `success-reason-${Date.now()}`,
+            text: action.payload.text,
+        };
+        return { ...state, successfulReasons: [...state.successfulReasons, newReason] };
+    }
+    case "DELETE_SUCCESSFUL_REASON":
+        return {
+            ...state,
+            successfulReasons: state.successfulReasons.filter(reason => reason.id !== action.payload),
+        };
     default:
       return state;
   }

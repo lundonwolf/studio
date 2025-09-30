@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -55,12 +55,20 @@ export function CheckOutDialog({ stopId, isOpen, onOpenChange }: CheckOutDialogP
     resolver: zodResolver(formSchema),
     defaultValues: {
       status: "Successful",
-      reason: "Completed as expected",
+      reason: "",
       notes: "",
     },
   });
+  
+  const status = form.watch("status");
 
-  const successfulReasons = [{ id: 'success-1', text: 'Completed as expected' }];
+  useEffect(() => {
+    const defaultReason = status === 'Successful' 
+        ? settingsState.successfulReasons[0]?.text || ""
+        : settingsState.reasons[0]?.text || "";
+    form.setValue("reason", defaultReason);
+  }, [status, settingsState.reasons, settingsState.successfulReasons, form]);
+
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
@@ -72,8 +80,6 @@ export function CheckOutDialog({ stopId, isOpen, onOpenChange }: CheckOutDialogP
     onOpenChange(false);
     form.reset();
   }
-  
-  const status = form.watch("status");
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -123,14 +129,14 @@ export function CheckOutDialog({ stopId, isOpen, onOpenChange }: CheckOutDialogP
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Reason</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a reason" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      { (status === 'Successful' ? successfulReasons : settingsState.reasons).map(reason => (
+                      { (status === 'Successful' ? settingsState.successfulReasons : settingsState.reasons).map(reason => (
                         <SelectItem key={reason.id} value={reason.text}>
                           {reason.text}
                         </SelectItem>
