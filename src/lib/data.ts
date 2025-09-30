@@ -10,9 +10,15 @@ export const availableStops: Stop[] = [
       email: 'john.smith@oakwood.com',
       phone: '555-123-4567',
     },
+    macAddress: '00:1B:44:11:3A:B7',
     screenId: 'OAK-LOBBY-01',
     wifiSsid: 'OakwoodGuest',
     techInstructions: 'Screen is located in the main lobby, behind the reception desk. Check for pixelation issues.',
+    imageGallery: [
+        'https://picsum.photos/seed/1/600/400',
+        'https://picsum.photos/seed/2/600/400',
+        'https://picsum.photos/seed/3/600/400',
+    ],
     coordinates: { latitude: 39.7817, longitude: -89.6501 },
   },
   {

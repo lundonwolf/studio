@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Trash2, PlusCircle, Edit, Save, X, ArrowLeft } from "lucide-react";
 import type { CheckoutReason, Stop } from '@/lib/types';
 import Link from 'next/link';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function SettingsPage() {
   const { state, dispatch } = useSettings();
@@ -36,7 +37,7 @@ export default function SettingsPage() {
   };
 
   const handleAddStop = () => {
-      const stopToAdd = {
+      const stopToAdd: Omit<Stop, 'id' | 'coordinates'> = {
         propertyName: newStop.propertyName || '',
         address: newStop.address || '',
         contact: {
@@ -46,7 +47,10 @@ export default function SettingsPage() {
         },
         screenId: newStop.screenId || '',
         wifiSsid: newStop.wifiSsid || '',
+        wifiPassword: newStop.wifiPassword || '',
+        macAddress: newStop.macAddress || '',
         techInstructions: newStop.techInstructions || '',
+        imageGallery: (newStop.imageGallery as unknown as string)?.split(',').map(url => url.trim()).filter(url => url) || [],
       };
     dispatch({ type: 'ADD_STOP', payload: stopToAdd });
     setNewStop({});
@@ -95,21 +99,37 @@ export default function SettingsPage() {
                     <Input value={editingStop.propertyName} onChange={e => setEditingStop({...editingStop, propertyName: e.target.value})} />
                     <Label>Address</Label>
                     <Input value={editingStop.address} onChange={e => setEditingStop({...editingStop, address: e.target.value})} />
-                     <Label>Screen ID</Label>
+                    <Label>Screen ID</Label>
                     <Input value={editingStop.screenId} onChange={e => setEditingStop({...editingStop, screenId: e.target.value})} />
-                    {/* Add other fields as needed */}
+                    <Label>MAC Address</Label>
+                    <Input value={editingStop.macAddress} onChange={e => setEditingStop({...editingStop, macAddress: e.target.value})} />
+                    <Label>Wi-Fi SSID</Label>
+                    <Input value={editingStop.wifiSsid} onChange={e => setEditingStop({...editingStop, wifiSsid: e.target.value})} />
+                    <Label>Wi-Fi Password</Label>
+                    <Input value={editingStop.wifiPassword} onChange={e => setEditingStop({...editingStop, wifiPassword: e.target.value})} />
+                    <Label>Contact Name</Label>
+                    <Input value={editingStop.contact.name} onChange={e => setEditingStop({...editingStop, contact: {...editingStop.contact, name: e.target.value}})} />
+                    <Label>Contact Email</Label>
+                    <Input value={editingStop.contact.email} onChange={e => setEditingStop({...editingStop, contact: {...editingStop.contact, email: e.target.value}})} />
+                    <Label>Contact Phone</Label>
+                    <Input value={editingStop.contact.phone} onChange={e => setEditingStop({...editingStop, contact: {...editingStop.contact, phone: e.target.value}})} />
+                    <Label>Tech Instructions</Label>
+                    <Textarea value={editingStop.techInstructions} onChange={e => setEditingStop({...editingStop, techInstructions: e.target.value})} />
+                    <Label>Image Gallery (comma-separated URLs)</Label>
+                    <Textarea value={editingStop.imageGallery?.join(', ')} onChange={e => setEditingStop({...editingStop, imageGallery: e.target.value.split(',').map(url => url.trim())})} />
+
                     <div className="flex gap-2">
                       <Button size="sm" onClick={handleSaveStop}><Save size={16}/> Save</Button>
                       <Button size="sm" variant="ghost" onClick={() => setEditingStop(null)}><X size={16}/> Cancel</Button>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-start">
                     <div>
                       <p className="font-semibold">{stop.propertyName}</p>
                       <p className="text-sm text-muted-foreground">{stop.address}</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 shrink-0">
                       <Button size="icon" variant="ghost" onClick={() => handleEditStop(stop)}><Edit className="h-5 w-5"/></Button>
                       <Button size="icon" variant="ghost" onClick={() => dispatch({ type: "DELETE_STOP", payload: stop.id })}>
                         <Trash2 className="h-5 w-5 text-destructive" />
@@ -127,10 +147,23 @@ export default function SettingsPage() {
                     <Input placeholder="e.g., 123 Main St" value={newStop.address || ''} onChange={e => setNewStop({...newStop, address: e.target.value})} />
                     <Label>Screen ID</Label>
                     <Input placeholder="e.g., DM-ENT-01" value={newStop.screenId || ''} onChange={e => setNewStop({...newStop, screenId: e.target.value})} />
-                     <Label>Wi-Fi SSID</Label>
+                    <Label>MAC Address</Label>
+                    <Input placeholder="e.g., 00:1A:2B:3C:4D:5E" value={newStop.macAddress || ''} onChange={e => setNewStop({...newStop, macAddress: e.target.value})} />
+                    <Label>Wi-Fi SSID</Label>
                     <Input placeholder="e.g., MallGuestWiFi" value={newStop.wifiSsid || ''} onChange={e => setNewStop({...newStop, wifiSsid: e.target.value})} />
-                     <Label>Tech Instructions</Label>
-                    <Input placeholder="e.g., Screen is by the food court." value={newStop.techInstructions || ''} onChange={e => setNewStop({...newStop, techInstructions: e.target.value})} />
+                    <Label>Wi-Fi Password</Label>
+                    <Input placeholder="e.g., supersecret" value={newStop.wifiPassword || ''} onChange={e => setNewStop({...newStop, wifiPassword: e.target.value})} />
+                    <Label>Contact Name</Label>
+                    <Input placeholder="e.g., John Doe" value={newStop.contact?.name || ''} onChange={e => setNewStop({...newStop, contact: {...newStop.contact, name: e.target.value}})} />
+                    <Label>Contact Email</Label>
+                    <Input placeholder="e.g., john@example.com" value={newStop.contact?.email || ''} onChange={e => setNewStop({...newStop, contact: {...newStop.contact, email: e.target.value}})} />
+                    <Label>Contact Phone</Label>
+                    <Input placeholder="e.g., 555-123-4567" value={newStop.contact?.phone || ''} onChange={e => setNewStop({...newStop, contact: {...newStop.contact, phone: e.target.value}})} />
+                    <Label>Tech Instructions</Label>
+                    <Textarea placeholder="e.g., Screen is by the food court." value={newStop.techInstructions || ''} onChange={e => setNewStop({...newStop, techInstructions: e.target.value})} />
+                    <Label>Image Gallery (comma-separated URLs)</Label>
+                    <Textarea placeholder="e.g., https://example.com/image1.jpg, https://example.com/image2.jpg" value={newStop.imageGallery as unknown as string || ''} onChange={e => setNewStop({...newStop, imageGallery: e.target.value as any})} />
+
                     <div className="flex gap-2">
                         <Button size="sm" onClick={handleAddStop}><Save size={16}/> Add Stop</Button>
                         <Button size="sm" variant="ghost" onClick={() => setIsAddingStop(false)}><X size={16}/> Cancel</Button>

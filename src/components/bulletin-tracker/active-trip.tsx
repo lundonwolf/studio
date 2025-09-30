@@ -1,12 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useTrip } from "@/hooks/use-trip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogIn, MapPin, Wifi, Info, Clipboard, ChevronRight, CheckCircle2 } from "lucide-react";
+import { LogIn, MapPin, Wifi, Info, Clipboard, ChevronRight, CheckCircle2, Hdd } from "lucide-react";
 import EndOfTripDialog from "./end-of-trip-dialog";
 import { CheckOutDialog } from "./checkout-dialog";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 export function ActiveTrip() {
   const { state, dispatch } = useTrip();
@@ -43,8 +51,25 @@ export function ActiveTrip() {
           <CardTitle>Current Stop: {currentStop.propertyName}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+            {currentStop.imageGallery && currentStop.imageGallery.length > 0 && (
+                 <Carousel className="w-full">
+                    <CarouselContent>
+                        {currentStop.imageGallery.map((url, index) => (
+                        <CarouselItem key={index}>
+                            <div className="aspect-video relative">
+                                <Image src={url} alt={`Image ${index + 1} for ${currentStop.propertyName}`} fill style={{ objectFit: 'cover' }} className="rounded-lg" />
+                            </div>
+                        </CarouselItem>
+                        ))}
+                    </CarouselContent>
+                    <CarouselPrevious />
+                    <CarouselNext />
+                </Carousel>
+            )}
+
           <div className="flex items-center gap-2 text-muted-foreground"><MapPin size={16} /> {currentStop.address}</div>
           <div className="flex items-center gap-2 text-muted-foreground"><Clipboard size={16} /> Screen ID: {currentStop.screenId}</div>
+          {currentStop.macAddress && <div className="flex items-center gap-2 text-muted-foreground"><Hdd size={16} /> MAC: {currentStop.macAddress}</div>}
           <div className="flex items-center gap-2 text-muted-foreground"><Wifi size={16} /> Wi-Fi: {currentStop.wifiSsid}</div>
           <div className="p-3 bg-secondary/50 rounded-lg">
             <h4 className="font-semibold flex items-center gap-2"><Info size={16} /> Tech Instructions</h4>

@@ -12,7 +12,9 @@ export type Stop = {
   screenId: string;
   wifiSsid: string;
   wifiPassword?: string;
+  macAddress?: string;
   techInstructions: string;
+  imageGallery?: string[];
   coordinates: {
     latitude: number;
     longitude: number;
