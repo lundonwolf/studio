@@ -6,6 +6,7 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'theBulletinTracker',
   description: 'Track job locations, hours, and generate reports.',
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
