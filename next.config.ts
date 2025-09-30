@@ -5,6 +5,9 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === "development",
+  fallbacks: {
+    document: '/_offline',
+  }
 });
 
 const nextConfig: NextConfig = {
@@ -39,10 +42,11 @@ const nextConfig: NextConfig = {
     ],
   },
   experimental: {
-    allowedDevOrigins: [
-      '6000-firebase-studio-1759208417394.cluster-76blnmxvvzdpat4inoxk5tmzik.cloudworkstations.dev',
-    ]
+    //
   },
+  allowedDevOrigins: [
+    '6000-firebase-studio-1759208417394.cluster-76blnmxvvzdpat4inoxk5tmzik.cloudworkstations.dev',
+  ]
 };
 
 export default withPWA(nextConfig);
