@@ -31,10 +31,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  experimental: {},
-  allowedDomains: [
-    '6000-firebase-studio-1759208417394.cluster-76blnmxvvzdpat4inoxk5tmzik.cloudworkstations.dev',
-  ]
+  experimental: {
+    allowedDevOrigins: [
+      '6000-firebase-studio-1759208417394.cluster-76blnmxvvzdpat4inoxk5tmzik.cloudworkstations.dev',
+    ]
+  },
 };
 
 export default nextConfig;
