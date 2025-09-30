@@ -3,12 +3,18 @@
 import Link from "next/link";
 import { Logo } from "@/components/icons";
 import { Button } from "@/components/ui/button";
-import { Settings, LogOut } from "lucide-react";
+import { Settings, LogOut, FileX2 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { auth } from "@/lib/firebase";
+import { useTrip } from "@/hooks/use-trip";
+import EndOfTripDialog from "./end-of-trip-dialog";
+import { useState } from "react";
 
 export function Header() {
   const { user } = useAuth();
+  const { state } = useTrip();
+  const [isEndTripDialogOpen, setEndTripDialogOpen] = useState(false);
+
 
   const handleSignOut = async () => {
     await auth.signOut();
@@ -30,6 +36,11 @@ export function Header() {
       <div className="flex items-center gap-2">
         {user && (
             <>
+            {state.tripStatus === 'active' && (
+              <Button onClick={() => setEndTripDialogOpen(true)} variant="destructive" size="sm">
+                <FileX2 className="mr-2 h-4 w-4" /> End Trip
+              </Button>
+            )}
             <Button asChild variant="ghost" size="icon">
                 <Link href="/settings">
                 <Settings />
@@ -43,6 +54,7 @@ export function Header() {
             </>
         )}
        </div>
+       <EndOfTripDialog isOpen={isEndTripDialogOpen} onOpenChange={setEndTripDialogOpen} />
     </header>
   );
 }

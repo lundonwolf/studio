@@ -31,7 +31,7 @@ import { generateEndOfTripReport } from "@/ai/flows/generate-end-of-trip-report"
 const formSchema = z.object({
   mileage: z.coerce.number().min(0, "Mileage must be a positive number."),
   expenses: z.string().optional(),
-  inventoryCheck: z.string().min(1, "Inventory check is required."),
+  endOfDayInventoryCheck: z.string().min(1, "Inventory check is required."),
   technicianNotes: z.string().optional(),
 });
 
@@ -50,7 +50,7 @@ export default function EndOfTripDialog({ isOpen, onOpenChange }: EndOfTripDialo
     defaultValues: {
       mileage: 0,
       expenses: "",
-      inventoryCheck: "",
+      endOfDayInventoryCheck: "",
       technicianNotes: "",
     },
   });
@@ -78,10 +78,13 @@ export default function EndOfTripDialog({ isOpen, onOpenChange }: EndOfTripDialo
         });
 
         const reportInput = {
-            ...values,
             totalHoursWorked: parseFloat(totalHoursWorked.toFixed(2)),
             numberOfStops: completedStops.length,
             stops: completedStops,
+            mileage: values.mileage,
+            expenses: values.expenses || "None",
+            endOfDayInventoryCheck: values.endOfDayInventoryCheck,
+            technicianNotes: values.technicianNotes || "None",
         };
 
         const result = await generateEndOfTripReport(reportInput);
@@ -131,7 +134,7 @@ export default function EndOfTripDialog({ isOpen, onOpenChange }: EndOfTripDialo
             />
             <FormField
               control={form.control}
-              name="inventoryCheck"
+              name="endOfDayInventoryCheck"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>End of Day Inventory Check</FormLabel>
