@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTrip } from "@/hooks/use-trip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Compass, LocateFixed, Waypoints } from "lucide-react";
+import { Compass, LocateFixed, Waypoints, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { haversineDistance } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,26 +14,49 @@ export function MapView() {
   const { state, dispatch } = useTrip();
   const { currentLocation, activeStopIndex, itinerary, history } = state;
   const { toast } = useToast();
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!("geolocation" in navigator)) {
-      console.error("Geolocation is not supported by this browser.");
+      const errorMsg = "Geolocation is not supported by this browser.";
+      console.error(errorMsg);
+      setLocationError(errorMsg);
       return;
     }
 
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
+        if(locationError) setLocationError(null);
         const { latitude, longitude } = position.coords;
         dispatch({ type: "SET_CURRENT_LOCATION", payload: { latitude, longitude } });
       },
       (error) => {
-        console.error("Error getting location:", error);
+        let errorMsg = "An unknown error occurred while getting your location.";
+        switch(error.code) {
+            case error.PERMISSION_DENIED:
+                errorMsg = "Location access denied. Please enable it in your browser settings.";
+                break;
+            case error.POSITION_UNAVAILABLE:
+                errorMsg = "Location information is unavailable.";
+                break;
+            case error.TIMEOUT:
+                errorMsg = "The request to get user location timed out.";
+                break;
+        }
+        console.error("Error getting location:", errorMsg);
+        setLocationError(errorMsg);
+        toast({
+            variant: 'destructive',
+            title: "Location Error",
+            description: errorMsg,
+        });
       },
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [dispatch]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, toast]);
 
   useEffect(() => {
     if(state.tripStatus !== 'active' || activeStopIndex === null || !currentLocation) return;
@@ -72,7 +95,13 @@ export function MapView() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="aspect-[4/3] w-full rounded-lg overflow-hidden relative shadow-md bg-muted">
-          {mapSrc ? (
+          {locationError ? (
+             <div className="flex flex-col items-center justify-center h-full text-center text-destructive p-4">
+                <AlertTriangle className="h-8 w-8 mb-2" />
+                <p className="font-semibold">Could not get location</p>
+                <p className="text-sm">{locationError}</p>
+             </div>
+          ) : mapSrc ? (
             <iframe
               width="100%"
               height="100%"
