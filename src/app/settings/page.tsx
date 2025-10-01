@@ -6,165 +6,28 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, PlusCircle, Edit, Save, X, ArrowLeft, Download, GripVertical } from "lucide-react";
+import { Trash2, PlusCircle, ArrowLeft, Download, GripVertical } from "lucide-react";
 import type { CheckoutReason, Stop } from '@/lib/types';
 import Link from 'next/link';
-import { Textarea } from '@/components/ui/textarea';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
-
-const LocationForm = ({
-  stop,
-  onSave,
-  onCancel,
-  onChange,
-  isAdding,
-}: {
-  stop: Partial<Stop>,
-  onSave: () => void,
-  onCancel: () => void,
-  onChange: (stop: Partial<Stop>) => void,
-  isAdding?: boolean,
-}) => {
-  const handleChange = (field: keyof Stop, value: any) => {
-    onChange({ ...stop, [field]: value });
-  };
-  const handleContactChange = (field: keyof Stop['contact'], value: any) => {
-    onChange({ ...stop, contact: { ...stop.contact, [field]: value } });
-  };
-  const handleImageGalleryChange = (value: string) => {
-    onChange({ ...stop, imageGallery: value.split(',').map(url => url.trim()) });
-  };
-
-  return (
-    <div className="p-3 border-dashed border-2 rounded-lg space-y-2">
-       <Accordion type="multiple" defaultValue={['location', 'connection', 'contact', 'instructions', 'gallery']} className="w-full">
-        <AccordionItem value="location">
-          <AccordionTrigger>Location Details</AccordionTrigger>
-          <AccordionContent className="space-y-2 px-1">
-            <Label>Property Name</Label>
-            <Input placeholder="e.g., Downtown Mall" value={stop.propertyName || ''} onChange={e => handleChange('propertyName', e.target.value)} />
-            <Label>Address</Label>
-            <Input placeholder="e.g., 123 Main St" value={stop.address || ''} onChange={e => handleChange('address', e.target.value)} />
-            <Label>Screen Location</Label>
-            <Input placeholder="e.g., Lobby, near the entrance" value={stop.screenLocation || ''} onChange={e => handleChange('screenLocation', e.target.value)} />
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="connection">
-          <AccordionTrigger>Connection Details</AccordionTrigger>
-          <AccordionContent className="space-y-2 px-1">
-            <Label>Screen ID</Label>
-            <Input placeholder="e.g., DM-ENT-01" value={stop.screenId || ''} onChange={e => handleChange('screenId', e.target.value)} />
-            <Label>MAC Address</Label>
-            <Input placeholder="e.g., 00:1A:2B:3C:4D:5E" value={stop.macAddress || ''} onChange={e => handleChange('macAddress', e.target.value)} />
-            <Label>Wi-Fi SSID</Label>
-            <Input placeholder="e.g., MallGuestWiFi" value={stop.wifiSsid || ''} onChange={e => handleChange('wifiSsid', e.target.value)} />
-            <Label>Wi-Fi Password</Label>
-            <Input placeholder="e.g., supersecret" value={stop.wifiPassword || ''} onChange={e => handleChange('wifiPassword', e.target.value)} />
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="contact">
-          <AccordionTrigger>Contact Details</AccordionTrigger>
-          <AccordionContent className="space-y-2 px-1">
-            <Label>Contact Name</Label>
-            <Input placeholder="e.g., John Doe" value={stop.contact?.name || ''} onChange={e => handleContactChange('name', e.target.value)} />
-            <Label>Contact Email</Label>
-            <Input placeholder="e.g., john@example.com" value={stop.contact?.email || ''} onChange={e => handleContactChange('email', e.target.value)} />
-            <Label>Contact Phone</Label>
-            <Input placeholder="e.g., 555-123-4567" value={stop.contact?.phone || ''} onChange={e => handleContactChange('phone', e.target.value)} />
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="instructions">
-          <AccordionTrigger>Tech Instructions</AccordionTrigger>
-          <AccordionContent className="px-1">
-             <Textarea placeholder="e.g., Screen is by the food court." value={stop.techInstructions || ''} onChange={e => handleChange('techInstructions', e.target.value)} />
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="gallery">
-          <AccordionTrigger>Image Gallery</AccordionTrigger>
-          <AccordionContent className="px-1">
-            <Textarea placeholder="e.g., https://example.com/image1.jpg, https://example.com/image2.jpg" value={stop.imageGallery?.join(', ') || ''} onChange={e => handleImageGalleryChange(e.target.value)} />
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-
-      <div className="flex gap-2 pt-4">
-        <Button size="sm" onClick={onSave}><Save size={16}/> {isAdding ? 'Add Stop' : 'Save'}</Button>
-        <Button size="sm" variant="ghost" onClick={onCancel}><X size={16}/> Cancel</Button>
-      </div>
-    </div>
-  );
-}
 
 export default function SettingsPage() {
   const { state, dispatch } = useSettings();
   const { stops, reasons, successfulReasons } = state;
-
-  // Locations state
-  const [editingStop, setEditingStop] = useState<Stop | null>(null);
-  const [newStop, setNewStop] = useState<Partial<Stop>>({
-    contact: { name: '', email: '', phone: '' },
-    imageGallery: [],
-  });
-  const [isAddingStop, setIsAddingStop] = useState(false);
 
   // Reasons state
   const [newReason, setNewReason] = useState("");
   const [newSuccessfulReason, setNewSuccessfulReason] = useState("");
 
   const handleDragEnd = (result: DropResult) => {
-    const { source, destination, draggableId, type } = result;
+    const { source, destination, type } = result;
 
-    if (!destination) {
+    if (!destination || (source.droppableId === destination.droppableId && source.index === destination.index)) {
       return;
     }
-    
-    if (source.droppableId === destination.droppableId && source.index === destination.index) {
-        return;
-    }
 
-    const itemType = type as 'stops' | 'reasons' | 'successfulReasons';
+    const itemType = type as 'reasons' | 'successfulReasons';
     dispatch({ type: 'REORDER_ITEMS', payload: { type: itemType, sourceIndex: source.index, destinationIndex: destination.index } });
-  };
-
-
-  // Handlers for Locations
-  const handleEditStop = (stop: Stop) => {
-    setEditingStop({ ...stop });
-  };
-
-  const handleSaveStop = () => {
-    if (editingStop) {
-      dispatch({ type: "UPDATE_STOP", payload: editingStop });
-      setEditingStop(null);
-    }
-  };
-
-  const handleAddStop = () => {
-      const stopToAdd: Omit<Stop, 'id' | 'coordinates'> = {
-        propertyName: newStop.propertyName || '',
-        address: newStop.address || '',
-        screenLocation: newStop.screenLocation || '',
-        contact: {
-            name: newStop.contact?.name || '',
-            email: newStop.contact?.email || '',
-            phone: newStop.contact?.phone || '',
-        },
-        screenId: newStop.screenId || '',
-        wifiSsid: newStop.wifiSsid || '',
-        wifiPassword: newStop.wifiPassword || '',
-        macAddress: newStop.macAddress || '',
-        techInstructions: newStop.techInstructions || '',
-        imageGallery: newStop.imageGallery?.filter(url => url) || [],
-      };
-    dispatch({ type: 'ADD_STOP', payload: stopToAdd });
-    setNewStop({ contact: { name: '', email: '', phone: '' }, imageGallery: [] });
-    setIsAddingStop(false);
   };
 
   // Handlers for Reasons
@@ -211,7 +74,7 @@ export default function SettingsPage() {
             <div className="flex justify-between items-center">
                 <div>
                     <CardTitle>Manage Locations</CardTitle>
-                    <CardDescription>Add, edit, or remove service stops.</CardDescription>
+                    <CardDescription>View service stops. New stops must be added to the code.</CardDescription>
                 </div>
                  <Button variant="outline" size="icon" onClick={() => exportData(stops, "bulletin-tracker-locations.json")}>
                     <Download className="h-5 w-5" />
@@ -219,63 +82,19 @@ export default function SettingsPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-             <Droppable droppableId="stops" type="stops">
-              {(provided) => (
-                <div {...provided.droppableProps} ref={provided.innerRef}>
-                  {stops.map((stop, index) => (
-                     <Draggable key={stop.id} draggableId={stop.id} index={index}>
-                      {(provided, snapshot) => (
-                        <div 
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          className={`p-3 bg-secondary/50 rounded-lg space-y-2 mb-2 ${snapshot.isDragging ? 'shadow-lg' : ''}`}
-                        >
-                          {editingStop?.id === stop.id ? (
-                              <LocationForm 
-                                  stop={editingStop}
-                                  onSave={handleSaveStop}
-                                  onCancel={() => setEditingStop(null)}
-                                  onChange={(updatedStop) => setEditingStop(updatedStop as Stop)}
-                              />
-                          ) : (
-                            <div className="flex justify-between items-start">
-                               <div className="flex items-center gap-2">
-                                <button {...provided.dragHandleProps} className="p-1"><GripVertical className="h-5 w-5 text-muted-foreground" /></button>
-                                <div>
-                                    <p className="font-semibold">{stop.propertyName}</p>
-                                    <p className="text-sm text-muted-foreground">{stop.address}</p>
-                                </div>
-                               </div>
-                              <div className="flex gap-2 shrink-0">
-                                <Button size="icon" variant="ghost" onClick={() => handleEditStop(stop)}><Edit className="h-5 w-5"/></Button>
-                                <Button size="icon" variant="ghost" onClick={() => dispatch({ type: "DELETE_STOP", payload: stop.id })}>
-                                  <Trash2 className="h-5 w-5 text-destructive" />
-                                </Button>
-                              </div>
+              <div>
+                {stops.map((stop) => (
+                    <div key={stop.id} className="p-3 bg-secondary/50 rounded-lg space-y-2 mb-2">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <p className="font-semibold">{stop.propertyName}</p>
+                                <p className="text-sm text-muted-foreground">{stop.address}</p>
+                                <p className="text-sm text-muted-foreground italic pl-2">↳ {stop.screenLocation}</p>
                             </div>
-                          )}
                         </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-
-            {isAddingStop ? (
-                <LocationForm 
-                    stop={newStop}
-                    onSave={handleAddStop}
-                    onCancel={() => setIsAddingStop(false)}
-                    onChange={setNewStop}
-                    isAdding
-                />
-            ) : (
-                <Button onClick={() => setIsAddingStop(true)} className="w-full" variant="outline">
-                    <PlusCircle className="mr-2 h-4 w-4"/> Add New Location
-                </Button>
-            )}
+                    </div>
+                ))}
+              </div>
           </CardContent>
         </Card>
 
@@ -292,7 +111,7 @@ export default function SettingsPage() {
                     {successfulReasons.map((reason, index) => (
                         <Draggable key={reason.id} draggableId={reason.id} index={index}>
                         {(provided, snapshot) => (
-                            <div 
+                            <div
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             className={`flex items-center justify-between p-3 bg-secondary/50 rounded-lg mb-2 ${snapshot.isDragging ? 'shadow-lg' : ''}`}
@@ -337,7 +156,7 @@ export default function SettingsPage() {
                     {reasons.map((reason, index) => (
                         <Draggable key={reason.id} draggableId={reason.id} index={index}>
                         {(provided, snapshot) => (
-                            <div 
+                            <div
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             className={`flex items-center justify-between p-3 bg-secondary/50 rounded-lg mb-2 ${snapshot.isDragging ? 'shadow-lg' : ''}`}
