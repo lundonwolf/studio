@@ -15,11 +15,6 @@ function TrafficPredictor() {
     const { state } = useTrip();
     const { itinerary, currentLocation } = state;
     const { toast } = useToast();
-    const [departureTime, setDepartureTime] = useState(() => {
-        const now = new Date();
-        now.setMinutes(now.getMinutes() + 15); // Default to 15 mins from now
-        return now.toTimeString().slice(0,5);
-    });
     const [isLoading, setIsLoading] = useState(false);
     const [prediction, setPrediction] = useState<PredictTravelTimeOutput | null>(null);
 
@@ -37,14 +32,9 @@ function TrafficPredictor() {
         setPrediction(null);
         try {
             const firstStop = itinerary[0];
-            const [hours, minutes] = departureTime.split(':');
-            const departureDate = new Date();
-            departureDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-
             const result = await predictTravelTime({
-                startAddress: "My Current Location", // AI can infer from context or just use it as a label
+                startAddress: "My Current Location",
                 endAddress: firstStop.address,
-                departureTime: departureDate.toISOString(),
             });
             setPrediction(result);
 
@@ -69,34 +59,31 @@ function TrafficPredictor() {
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <TrafficCone className="text-primary" />
-                    Traffic Predictor
+                    Real-Time Traffic
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                    Estimate travel time to your first stop (<span className="font-semibold">{itinerary[0].propertyName}</span>) based on typical traffic.
+                    Estimate travel time to your first stop (<span className="font-semibold">{itinerary[0].propertyName}</span>) with current traffic conditions.
                 </p>
-                <div className="flex items-end gap-4">
-                    <div className="flex-grow">
-                        <label htmlFor="departure-time" className="text-sm font-medium">Departure Time</label>
-                        <Input
-                            id="departure-time"
-                            type="time"
-                            value={departureTime}
-                            onChange={(e) => setDepartureTime(e.target.value)}
-                            className="mt-1"
-                        />
-                    </div>
-                    <Button onClick={handlePrediction} disabled={isLoading}>
-                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                        Predict
-                    </Button>
-                </div>
+                <Button onClick={handlePrediction} disabled={isLoading} className="w-full">
+                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    Get Live Travel Time
+                </Button>
                 {prediction && (
-                    <div className="p-4 bg-secondary rounded-lg space-y-2">
+                    <div className="p-4 bg-secondary rounded-lg space-y-2 mt-4">
                         <h4 className="font-semibold">Prediction Result:</h4>
-                        <p><Clock className="inline-block mr-2 h-4 w-4" /> Estimated Duration: <span className="font-bold">{prediction.estimatedDuration} minutes</span></p>
-                        <p className="text-sm text-muted-foreground">{prediction.trafficSummary}</p>
+                        <div className="flex justify-around text-center">
+                            <div>
+                                <p className="text-2xl font-bold">{prediction.estimatedDuration}</p>
+                                <p className="text-sm text-muted-foreground">minutes</p>
+                            </div>
+                             <div>
+                                <p className="text-2xl font-bold">{prediction.distance}</p>
+                                <p className="text-sm text-muted-foreground">distance</p>
+                            </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground pt-2 text-center">{prediction.trafficSummary}</p>
                     </div>
                 )}
             </CardContent>
