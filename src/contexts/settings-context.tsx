@@ -18,8 +18,8 @@ type Action =
   | { type: "DELETE_SUCCESSFUL_REASON"; payload: string }
   | { type: "HYDRATE_STATE"; payload: Partial<State> }
   | { type: "REORDER_ITEMS"; payload: { type: 'reasons' | 'successfulReasons' | 'stops'; sourceIndex: number; destinationIndex: number }}
-  | { type: "ADD_STOP"; payload: Omit<Stop, 'id'> }
-  | { type: "UPDATE_STOP"; payload: Stop }
+  | { type: "ADD_STOP"; payload: Omit<Stop, 'id' | 'coordinates'> }
+  | { type: "UPDATE_STOP"; payload: Omit<Stop, 'coordinates'> }
   | { type: "DELETE_STOP"; payload: string };
 
 const defaultState: State = {
@@ -73,7 +73,7 @@ function settingsReducer(state: State, action: Action): State {
     case 'UPDATE_STOP': {
       return {
         ...state,
-        stops: state.stops.map(stop => stop.id === action.payload.id ? action.payload : stop),
+        stops: state.stops.map(stop => stop.id === action.payload.id ? {...stop, ...action.payload} : stop),
       };
     }
     case 'DELETE_STOP':

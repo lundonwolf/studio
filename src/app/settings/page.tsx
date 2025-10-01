@@ -21,7 +21,6 @@ const initialStopFormState = {
     wifiPassword: "",
     macAddress: "",
     techInstructions: "",
-    coordinates: { latitude: 0, longitude: 0 },
 };
 
 export default function SettingsPage() {
@@ -31,7 +30,7 @@ export default function SettingsPage() {
   // Stop state
   const [isAdding, setIsAdding] = useState(false);
   const [editingStopId, setEditingStopId] = useState<string | null>(null);
-  const [stopFormState, setStopFormState] = useState<Omit<Stop, 'id' | 'imageGallery'>>(initialStopFormState);
+  const [stopFormState, setStopFormState] = useState<Omit<Stop, 'id' | 'imageGallery' | 'coordinates'>>(initialStopFormState);
 
   // Reasons state
   const [newReason, setNewReason] = useState("");
@@ -63,7 +62,7 @@ export default function SettingsPage() {
 
   const handleEditClick = (stop: Stop) => {
     setEditingStopId(stop.id);
-    const { id, imageGallery, ...editableStop } = stop;
+    const { id, imageGallery, coordinates, ...editableStop } = stop;
     setStopFormState(editableStop);
   };
 
@@ -78,9 +77,6 @@ export default function SettingsPage() {
     if (name.startsWith("contact.")) {
         const field = name.split('.')[1];
         setStopFormState(prev => ({ ...prev, contact: { ...prev.contact, [field]: value } }));
-    } else if (name.startsWith("coordinates.")) {
-        const field = name.split('.')[1];
-        setStopFormState(prev => ({ ...prev, coordinates: { ...prev.coordinates, [field]: parseFloat(value) || 0 } }));
     } else {
         setStopFormState(prev => ({ ...prev, [name]: value }));
     }
@@ -119,21 +115,13 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Object.keys(stopFormState).map(key => {
-                const fieldKey = key as keyof Omit<Stop, 'id' | 'imageGallery'>;
+                const fieldKey = key as keyof Omit<Stop, 'id' | 'imageGallery' | 'coordinates'>;
                 if (typeof stopFormState[fieldKey] === 'object') {
                     if (fieldKey === 'contact') {
                         return Object.keys(stopFormState.contact).map(contactKey => (
                             <div className="space-y-2" key={`contact-${contactKey}`}>
                                 <Label htmlFor={`contact.${contactKey}`}>Contact {contactKey}</Label>
                                 <Input id={`contact.${contactKey}`} name={`contact.${contactKey}`} value={stopFormState.contact[contactKey as keyof typeof stopFormState.contact]} onChange={handleFormChange} />
-                            </div>
-                        ));
-                    }
-                    if (fieldKey === 'coordinates') {
-                         return Object.keys(stopFormState.coordinates).map(coordKey => (
-                            <div className="space-y-2" key={`coord-${coordKey}`}>
-                                <Label htmlFor={`coordinates.${coordKey}`}>{coordKey.charAt(0).toUpperCase() + coordKey.slice(1)}</Label>
-                                <Input id={`coordinates.${coordKey}`} name={`coordinates.${coordKey}`} type="number" step="any" value={stopFormState.coordinates[coordKey as keyof typeof stopFormState.coordinates]} onChange={handleFormChange} />
                             </div>
                         ));
                     }

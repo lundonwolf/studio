@@ -64,7 +64,7 @@ export function MapView() {
     if(state.tripStatus !== 'active' || activeStopIndex === null || !currentLocation) return;
     
     const currentStop = itinerary[activeStopIndex];
-    if(!currentStop) return;
+    if(!currentStop || !currentStop.coordinates) return;
 
     const isCheckedIn = history.some(h => h.stopId === currentStop.id && h.timeOut === null);
     if(isCheckedIn) return;
@@ -83,8 +83,8 @@ export function MapView() {
   }, [currentLocation, activeStopIndex, itinerary, history, state.tripStatus, toast]);
 
   useEffect(() => {
-    const itineraryStops = itinerary.map(stop => stop.coordinates);
-    const allPoints = [...itineraryStops, ...(currentLocation ? [currentLocation] : [])];
+    const itineraryStopsWithCoords = itinerary.map(stop => stop.coordinates).filter(Boolean) as {latitude: number, longitude: number}[];
+    const allPoints = [...itineraryStopsWithCoords, ...(currentLocation ? [currentLocation] : [])];
     
     // Don't render a map if there's no itinerary and no current location
     if (allPoints.length === 0) {
@@ -93,9 +93,10 @@ export function MapView() {
     }
 
     let markers = itinerary.map((stop, index) => {
+        if (!stop.coordinates) return null;
         const label = index + 1;
         return `pin-l-marker+0074D9(${stop.coordinates.longitude},${stop.coordinates.latitude})`
-    }).join(',');
+    }).filter(Boolean).join(',');
     
     if (currentLocation) {
         const userMarker = `pin-s-star+F54748(${currentLocation.longitude},${currentLocation.latitude})`;
@@ -120,7 +121,6 @@ export function MapView() {
 
     if (bbox) {
         const url = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik`;
-        const finalMarkers = itinerary.map((stop, index) => `${stop.coordinates.latitude},${stop.coordinates.longitude}`).join(';');
         
         // The embed map from openstreetmap has some limitations with markers.
         // A single marker can be added with `&marker=lat,lon`.
@@ -128,8 +128,9 @@ export function MapView() {
         // The directions link will show all markers.
         if (allPoints.length === 1 && currentLocation) {
              setMapUrl(`${url}&marker=${currentLocation.latitude},${currentLocation.longitude}`);
-        } else if (allPoints.length === 1 && itinerary.length === 1) {
-             setMapUrl(`${url}&marker=${itinerary[0].coordinates.latitude},${itinerary[0].coordinates.longitude}`);
+        } else if (allPoints.length === 1 && itineraryStopsWithCoords.length === 1) {
+             const stopCoord = itineraryStopsWithCoords[0];
+             setMapUrl(`${url}&marker=${stopCoord.latitude},${stopCoord.longitude}`);
         }
         else {
              setMapUrl(url);
@@ -142,7 +143,7 @@ export function MapView() {
     if (itinerary.length === 0) return null;
 
     let url = "https://www.google.com/maps/dir/";
-    const waypoints = itinerary.map(stop => `${stop.coordinates.latitude},${stop.coordinates.longitude}`);
+    const waypoints = itinerary.map(stop => encodeURIComponent(stop.address));
     url += waypoints.join('/');
     return url;
   }

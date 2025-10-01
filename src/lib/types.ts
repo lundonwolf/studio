@@ -16,7 +16,7 @@ export type Stop = {
   macAddress?: string;
   techInstructions: string;
   imageGallery?: string[];
-  coordinates: {
+  coordinates?: {
     latitude: number;
     longitude: number;
   };
@@ -32,7 +32,7 @@ export type CheckInEvent = {
   notes?: string;
   status?: CheckOutStatus;
   reason?: string;
-  coordinates: {
+  coordinates?: {
     latitude: number;
     longitude: number;
   };

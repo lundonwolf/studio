@@ -64,11 +64,11 @@ export function HistoryAndReports() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleGenerateReport = async () => {
-    const completedEvents = history.filter(event => event.timeIn && event.timeOut);
+    const completedEvents = history.filter(event => event.timeIn && event.timeOut && event.coordinates);
     if(completedEvents.length === 0) {
       toast({
         title: "No data to report",
-        description: "Complete at least one check-in/check-out cycle to generate a report.",
+        description: "Complete at least one check-in/check-out cycle at a location with coordinates to generate a report.",
         variant: "destructive"
       });
       return;
@@ -79,8 +79,8 @@ export function HistoryAndReports() {
       const reportInput = {
         jobName: "Daily Route",
         locations: completedEvents.map(event => ({
-          latitude: event.coordinates.latitude,
-          longitude: event.coordinates.longitude,
+          latitude: event.coordinates!.latitude,
+          longitude: event.coordinates!.longitude,
           timeIn: event.timeIn.toISOString(),
           timeOut: event.timeOut!.toISOString(),
         })),
@@ -162,7 +162,7 @@ export function HistoryAndReports() {
         </ScrollArea>
       </CardContent>
       <CardFooter>
-        <Button onClick={handleGenerateReport} disabled={history.filter(h => h.timeOut).length === 0 || isLoading} className="w-full">
+        <Button onClick={handleGenerateReport} disabled={history.filter(h => h.timeOut && h.coordinates).length === 0 || isLoading} className="w-full">
           {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
           Generate Location Report
         </Button>

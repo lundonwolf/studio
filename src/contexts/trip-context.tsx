@@ -131,10 +131,15 @@ function tripReducer(state: State, action: Action): State {
     }
 
     case "SET_CURRENT_LOCATION":
-      const newLocationHistory = state.tripStatus === 'active' 
-        ? [...state.locationHistory, action.payload]
-        : state.locationHistory;
-      return { ...state, currentLocation: action.payload, locationHistory: newLocationHistory };
+       if (state.tripStatus === 'active' && state.currentLocation) {
+        const distance = haversineDistance(state.currentLocation, action.payload);
+        // Only add to history if moved a meaningful distance to avoid spamming
+        if (distance > 0.01) { // roughly 16 meters
+            const newLocationHistory = [...state.locationHistory, action.payload];
+            return { ...state, currentLocation: action.payload, locationHistory: newLocationHistory };
+        }
+      }
+      return { ...state, currentLocation: action.payload };
 
     case "END_TRIP":
       return { ...state, tripStatus: "ended", endOfTripReport: action.payload.report, locationHistory: [] };
@@ -152,6 +157,29 @@ function tripReducer(state: State, action: Action): State {
       return state;
   }
 }
+
+function haversineDistance(coords1: Coordinates, coords2: Coordinates) {
+  function toRad(x: number) {
+    return x * Math.PI / 180;
+  }
+
+  const R = 6371e3; // metres
+  const φ1 = toRad(coords1.latitude);
+  const φ2 = toRad(coords2.latitude);
+  const Δφ = toRad(coords2.latitude - coords1.latitude);
+  const Δλ = toRad(coords2.longitude - coords1.longitude);
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  // distance in meters
+  const distanceInMeters = R * c;
+  // convert to miles
+  return distanceInMeters * 0.000621371;
+}
+
 
 export const TripContext = createContext<{
     state: State;
