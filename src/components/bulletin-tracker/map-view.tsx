@@ -16,6 +16,7 @@ export function MapView() {
   const { currentLocation, activeStopIndex, itinerary, history } = state;
   const { toast } = useToast();
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [mapUrl, setMapUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!("geolocation" in navigator)) {
@@ -80,39 +81,51 @@ export function MapView() {
     }
 
   }, [currentLocation, activeStopIndex, itinerary, history, state.tripStatus, toast]);
-  
-  const getMapAndDirections = () => {
+
+  useEffect(() => {
     const allPoints = [...itinerary.map(s => s.coordinates), ...(currentLocation ? [currentLocation] : [])];
     if (allPoints.length === 0) {
-      return { mapSrc: null, directionsUrl: null, bbox: null };
+      setMapUrl(null);
+      return;
     }
 
-    const lats = allPoints.map(p => p.latitude);
-    const lons = allPoints.map(p => p.longitude);
-    const minLat = Math.min(...lats);
-    const maxLat = Math.max(...lats);
-    const minLon = Math.min(...lons);
-    const maxLon = Math.max(...lons);
-    
-    const bbox = `${minLon-0.01},${minLat-0.01},${maxLon+0.01},${maxLat+0.01}`;
+    const stopMarkers = itinerary.map((stop, index) => {
+      const label = index + 1;
+      return `pin-l-marker+0074D9(${stop.coordinates.longitude},${stop.coordinates.latitude})`;
+    }).join(',');
 
-    const stopMarkers = itinerary.map(stop => `pin-s-circle+0074D9(${stop.coordinates.longitude},${stop.coordinates.latitude})`).join(',');
     const userMarker = currentLocation ? `pin-s-star+F54748(${currentLocation.longitude},${currentLocation.latitude})` : '';
     const markers = [stopMarkers, userMarker].filter(Boolean).join(',');
 
-    const mapSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${currentLocation ? `${currentLocation.latitude},${currentLocation.longitude}`: ''}`;
-
-    let directionsUrl = null;
-    if (itinerary.length > 0) {
-        directionsUrl = "https://www.google.com/maps/dir/";
-        const waypoints = itinerary.map(stop => `${stop.coordinates.latitude},${stop.coordinates.longitude}`);
-        directionsUrl += waypoints.join('/');
+    // If there is more than one point, calculate bounding box
+    if(allPoints.length > 1) {
+      const lats = allPoints.map(p => p.latitude);
+      const lons = allPoints.map(p => p.longitude);
+      const minLat = Math.min(...lats);
+      const maxLat = Math.max(...lats);
+      const minLon = Math.min(...lons);
+      const maxLon = Math.max(...lons);
+      
+      const buffer = 0.01;
+      const bbox = `${minLon-buffer},${minLat-buffer},${maxLon+buffer},${maxLat+buffer}`;
+      setMapUrl(`https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${currentLocation ? `${currentLocation.latitude},${currentLocation.longitude}` : ''}`);
+    } else {
+      const center = allPoints[0];
+      setMapUrl(`https://www.openstreetmap.org/export/embed.html?bbox=${center.longitude-0.01},${center.latitude-0.01},${center.longitude+0.01},${center.latitude+0.01}&layer=mapnik&marker=${center.latitude},${center.longitude}`);
     }
 
-    return { mapSrc, directionsUrl, bbox };
+  }, [itinerary, currentLocation]);
+  
+  const getDirectionsUrl = () => {
+    if (itinerary.length === 0) return null;
+
+    let url = "https://www.google.com/maps/dir/";
+    const waypoints = itinerary.map(stop => `${stop.coordinates.latitude},${stop.coordinates.longitude}`);
+    url += waypoints.join('/');
+    return url;
   }
 
-  const { mapSrc, directionsUrl, bbox } = getMapAndDirections();
+  const directionsUrl = getDirectionsUrl();
 
 
   return (
@@ -131,7 +144,7 @@ export function MapView() {
                 <p className="font-semibold">Could not get location</p>
                 <p className="text-sm">{locationError}</p>
              </div>
-          ) : mapSrc ? (
+          ) : mapUrl ? (
             <iframe
               width="100%"
               height="100%"
@@ -139,7 +152,7 @@ export function MapView() {
               scrolling="no"
               marginHeight={0}
               marginWidth={0}
-              src={mapSrc}
+              src={mapUrl}
               style={{ border: 'none' }}
               title="Live Map"
             />
