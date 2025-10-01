@@ -19,6 +19,7 @@ type State = {
 type Action =
   | { type: "ADD_TO_ITINERARY"; payload: Stop }
   | { type: "REMOVE_FROM_ITINERARY"; payload: string }
+  | { type: "REORDER_ITINERARY"; payload: { sourceIndex: number; destinationIndex: number } }
   | { type: "START_TRIP" }
   | { type: "CHECK_IN"; payload: { stopId: string } }
   | { type: "CHECK_OUT"; payload: { notes: string; status: CheckOutStatus; reason: string } }
@@ -66,6 +67,14 @@ function tripReducer(state: State, action: Action): State {
     
     case "REMOVE_FROM_ITINERARY":
       return { ...state, itinerary: state.itinerary.filter(stop => stop.id !== action.payload) };
+
+    case 'REORDER_ITINERARY': {
+      const { sourceIndex, destinationIndex } = action.payload;
+      const newItinerary = [...state.itinerary];
+      const [removed] = newItinerary.splice(sourceIndex, 1);
+      newItinerary.splice(destinationIndex, 0, removed);
+      return { ...state, itinerary: newItinerary };
+    }
 
     case "START_TRIP":
       if (state.itinerary.length === 0) return { ...state };

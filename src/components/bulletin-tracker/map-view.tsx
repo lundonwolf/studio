@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useTrip } from "@/hooks/use-trip";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Compass, LocateFixed, Waypoints, AlertTriangle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Compass, LocateFixed, Waypoints, AlertTriangle, Route } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { haversineDistance } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "../ui/button";
 
 const GEOFENCE_RADIUS_METERS = 100; // in meters, haversineDistance now returns miles
 
@@ -80,9 +81,38 @@ export function MapView() {
 
   }, [currentLocation, activeStopIndex, itinerary, history, state.tripStatus, toast]);
   
-  const mapSrc = currentLocation
-    ? `https://www.openstreetmap.org/export/embed.html?bbox=${currentLocation.longitude-0.01},${currentLocation.latitude-0.01},${currentLocation.longitude+0.01},${currentLocation.latitude+0.01}&layer=mapnik&marker=${currentLocation.latitude},${currentLocation.longitude}`
-    : null;
+  const getMapAndDirections = () => {
+    const allPoints = [...itinerary.map(s => s.coordinates), ...(currentLocation ? [currentLocation] : [])];
+    if (allPoints.length === 0) {
+      return { mapSrc: null, directionsUrl: null, bbox: null };
+    }
+
+    const lats = allPoints.map(p => p.latitude);
+    const lons = allPoints.map(p => p.longitude);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const minLon = Math.min(...lons);
+    const maxLon = Math.max(...lons);
+    
+    const bbox = `${minLon-0.01},${minLat-0.01},${maxLon+0.01},${maxLat+0.01}`;
+
+    const stopMarkers = itinerary.map(stop => `pin-s-circle+0074D9(${stop.coordinates.longitude},${stop.coordinates.latitude})`).join(',');
+    const userMarker = currentLocation ? `pin-s-star+F54748(${currentLocation.longitude},${currentLocation.latitude})` : '';
+    const markers = [stopMarkers, userMarker].filter(Boolean).join(',');
+
+    const mapSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${currentLocation ? `${currentLocation.latitude},${currentLocation.longitude}`: ''}`;
+
+    let directionsUrl = null;
+    if (itinerary.length > 0) {
+        directionsUrl = "https://www.google.com/maps/dir/";
+        const waypoints = itinerary.map(stop => `${stop.coordinates.latitude},${stop.coordinates.longitude}`);
+        directionsUrl += waypoints.join('/');
+    }
+
+    return { mapSrc, directionsUrl, bbox };
+  }
+
+  const { mapSrc, directionsUrl, bbox } = getMapAndDirections();
 
 
   return (
@@ -128,6 +158,19 @@ export function MapView() {
             </div>
         </div>
       </CardContent>
+       {directionsUrl && (
+        <CardFooter>
+          <Button
+            asChild
+            className="w-full"
+            disabled={itinerary.length === 0}
+          >
+            <a href={directionsUrl} target="_blank" rel="noopener noreferrer">
+              <Route className="mr-2 h-4 w-4" /> Get Directions
+            </a>
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 }

@@ -19,7 +19,8 @@ type Action =
   | { type: "DELETE_REASON"; payload: string }
   | { type: "ADD_SUCCESSFUL_REASON"; payload: { text: string } }
   | { type: "DELETE_SUCCESSFUL_REASON"; payload: string }
-  | { type: "HYDRATE_STATE"; payload: State };
+  | { type: "HYDRATE_STATE"; payload: State }
+  | { type: "REORDER_ITEMS"; payload: { type: 'stops' | 'reasons' | 'successfulReasons'; sourceIndex: number; destinationIndex: number }};
 
 const defaultState: State = {
   stops: availableStops,
@@ -73,6 +74,13 @@ function settingsReducer(state: State, action: Action): State {
             ...state,
             successfulReasons: state.successfulReasons.filter(reason => reason.id !== action.payload),
         };
+     case 'REORDER_ITEMS': {
+      const { type, sourceIndex, destinationIndex } = action.payload;
+      const list = [...state[type]];
+      const [removed] = list.splice(sourceIndex, 1);
+      list.splice(destinationIndex, 0, removed);
+      return { ...state, [type]: list };
+    }
     default:
       return state;
   }

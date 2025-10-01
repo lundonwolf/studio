@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, PlusCircle, Edit, Save, X, ArrowLeft } from "lucide-react";
+import { Trash2, PlusCircle, Edit, Save, X, ArrowLeft, Download, GripVertical } from "lucide-react";
 import type { CheckoutReason, Stop } from '@/lib/types';
 import Link from 'next/link';
 import { Textarea } from '@/components/ui/textarea';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import {
   Accordion,
   AccordionContent,
@@ -116,6 +117,22 @@ export default function SettingsPage() {
   const [newReason, setNewReason] = useState("");
   const [newSuccessfulReason, setNewSuccessfulReason] = useState("");
 
+  const handleDragEnd = (result: DropResult) => {
+    const { source, destination, draggableId, type } = result;
+
+    if (!destination) {
+      return;
+    }
+    
+    if (source.droppableId === destination.droppableId && source.index === destination.index) {
+        return;
+    }
+
+    const itemType = type as 'stops' | 'reasons' | 'successfulReasons';
+    dispatch({ type: 'REORDER_ITEMS', payload: { type: itemType, sourceIndex: source.index, destinationIndex: destination.index } });
+  };
+
+
   // Handlers for Locations
   const handleEditStop = (stop: Stop) => {
     setEditingStop({ ...stop });
@@ -165,7 +182,18 @@ export default function SettingsPage() {
     }
   };
 
+   const exportData = (data: any, fileName: string) => {
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+      JSON.stringify(data, null, 2)
+    )}`;
+    const link = document.createElement("a");
+    link.href = jsonString;
+    link.download = fileName;
+    link.click();
+  };
+
   return (
+    <DragDropContext onDragEnd={handleDragEnd}>
     <div className="container mx-auto p-4 md:p-8">
         <div className="flex items-center gap-4 mb-8">
             <Button asChild variant="outline" size="icon">
@@ -180,35 +208,61 @@ export default function SettingsPage() {
         {/* Manage Locations */}
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle>Manage Locations</CardTitle>
-            <CardDescription>Add, edit, or remove service stops.</CardDescription>
+            <div className="flex justify-between items-center">
+                <div>
+                    <CardTitle>Manage Locations</CardTitle>
+                    <CardDescription>Add, edit, or remove service stops.</CardDescription>
+                </div>
+                 <Button variant="outline" size="icon" onClick={() => exportData(stops, "bulletin-tracker-locations.json")}>
+                    <Download className="h-5 w-5" />
+                 </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {stops.map(stop => (
-              <div key={stop.id} className="p-3 bg-secondary/50 rounded-lg space-y-2">
-                {editingStop?.id === stop.id ? (
-                    <LocationForm 
-                        stop={editingStop}
-                        onSave={handleSaveStop}
-                        onCancel={() => setEditingStop(null)}
-                        onChange={(updatedStop) => setEditingStop(updatedStop as Stop)}
-                    />
-                ) : (
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-semibold">{stop.propertyName}</p>
-                      <p className="text-sm text-muted-foreground">{stop.address}</p>
-                    </div>
-                    <div className="flex gap-2 shrink-0">
-                      <Button size="icon" variant="ghost" onClick={() => handleEditStop(stop)}><Edit className="h-5 w-5"/></Button>
-                      <Button size="icon" variant="ghost" onClick={() => dispatch({ type: "DELETE_STOP", payload: stop.id })}>
-                        <Trash2 className="h-5 w-5 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+             <Droppable droppableId="stops" type="stops">
+              {(provided) => (
+                <div {...provided.droppableProps} ref={provided.innerRef}>
+                  {stops.map((stop, index) => (
+                     <Draggable key={stop.id} draggableId={stop.id} index={index}>
+                      {(provided, snapshot) => (
+                        <div 
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className={`p-3 bg-secondary/50 rounded-lg space-y-2 mb-2 ${snapshot.isDragging ? 'shadow-lg' : ''}`}
+                        >
+                          {editingStop?.id === stop.id ? (
+                              <LocationForm 
+                                  stop={editingStop}
+                                  onSave={handleSaveStop}
+                                  onCancel={() => setEditingStop(null)}
+                                  onChange={(updatedStop) => setEditingStop(updatedStop as Stop)}
+                              />
+                          ) : (
+                            <div className="flex justify-between items-start">
+                               <div className="flex items-center gap-2">
+                                <button {...provided.dragHandleProps} className="p-1"><GripVertical className="h-5 w-5 text-muted-foreground" /></button>
+                                <div>
+                                    <p className="font-semibold">{stop.propertyName}</p>
+                                    <p className="text-sm text-muted-foreground">{stop.address}</p>
+                                </div>
+                               </div>
+                              <div className="flex gap-2 shrink-0">
+                                <Button size="icon" variant="ghost" onClick={() => handleEditStop(stop)}><Edit className="h-5 w-5"/></Button>
+                                <Button size="icon" variant="ghost" onClick={() => dispatch({ type: "DELETE_STOP", payload: stop.id })}>
+                                  <Trash2 className="h-5 w-5 text-destructive" />
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+
             {isAddingStop ? (
                 <LocationForm 
                     stop={newStop}
@@ -232,14 +286,32 @@ export default function SettingsPage() {
             <CardDescription>Customize reasons for "Successful" check-outs.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {successfulReasons.map(reason => (
-              <div key={reason.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
-                <p>{reason.text}</p>
-                <Button size="icon" variant="ghost" onClick={() => dispatch({ type: "DELETE_SUCCESSFUL_REASON", payload: reason.id })}>
-                  <Trash2 className="h-5 w-5 text-destructive" />
-                </Button>
-              </div>
-            ))}
+             <Droppable droppableId="successfulReasons" type="successfulReasons">
+                {(provided) => (
+                    <div {...provided.droppableProps} ref={provided.innerRef}>
+                    {successfulReasons.map((reason, index) => (
+                        <Draggable key={reason.id} draggableId={reason.id} index={index}>
+                        {(provided, snapshot) => (
+                            <div 
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className={`flex items-center justify-between p-3 bg-secondary/50 rounded-lg mb-2 ${snapshot.isDragging ? 'shadow-lg' : ''}`}
+                            >
+                                <div className="flex items-center gap-2">
+                                     <button {...provided.dragHandleProps} className="p-1"><GripVertical className="h-5 w-5 text-muted-foreground" /></button>
+                                    <p>{reason.text}</p>
+                                </div>
+                                <Button size="icon" variant="ghost" onClick={() => dispatch({ type: "DELETE_SUCCESSFUL_REASON", payload: reason.id })}>
+                                <Trash2 className="h-5 w-5 text-destructive" />
+                                </Button>
+                            </div>
+                        )}
+                        </Draggable>
+                    ))}
+                    {provided.placeholder}
+                    </div>
+                )}
+            </Froppable>
             <div className="flex gap-2">
               <Input
                 value={newSuccessfulReason}
@@ -259,14 +331,32 @@ export default function SettingsPage() {
             <CardDescription>Customize reasons for "Not Successful" check-outs.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {reasons.map(reason => (
-              <div key={reason.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
-                <p>{reason.text}</p>
-                <Button size="icon" variant="ghost" onClick={() => dispatch({ type: "DELETE_REASON", payload: reason.id })}>
-                  <Trash2 className="h-5 w-5 text-destructive" />
-                </Button>
-              </div>
-            ))}
+            <Droppable droppableId="reasons" type="reasons">
+                {(provided) => (
+                    <div {...provided.droppableProps} ref={provided.innerRef}>
+                    {reasons.map((reason, index) => (
+                        <Draggable key={reason.id} draggableId={reason.id} index={index}>
+                        {(provided, snapshot) => (
+                            <div 
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className={`flex items-center justify-between p-3 bg-secondary/50 rounded-lg mb-2 ${snapshot.isDragging ? 'shadow-lg' : ''}`}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <button {...provided.dragHandleProps} className="p-1"><GripVertical className="h-5 w-5 text-muted-foreground" /></button>
+                                    <p>{reason.text}</p>
+                                </div>
+                                <Button size="icon" variant="ghost" onClick={() => dispatch({ type: "DELETE_REASON", payload: reason.id })}>
+                                    <Trash2 className="h-5 w-5 text-destructive" />
+                                </Button>
+                            </div>
+                        )}
+                        </Draggable>
+                    ))}
+                    {provided.placeholder}
+                    </div>
+                )}
+            </Froppable>
             <div className="flex gap-2">
               <Input
                 value={newReason}
@@ -280,5 +370,6 @@ export default function SettingsPage() {
         </Card>
       </div>
     </div>
+    </DragDropContext>
   );
 }

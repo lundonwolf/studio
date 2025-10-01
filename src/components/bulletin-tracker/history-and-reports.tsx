@@ -21,7 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { History, FileText, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { History, FileText, Loader2, CheckCircle, XCircle, Download } from "lucide-react";
 import { generateLocationReport } from "@/ai/flows/generate-location-report";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -100,16 +100,33 @@ export function HistoryAndReports() {
     }
   };
 
+  const exportData = (data: any, fileName: string) => {
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+      JSON.stringify(data, null, 2)
+    )}`;
+    const link = document.createElement("a");
+    link.href = jsonString;
+    link.download = fileName;
+    link.click();
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <History className="text-primary" />
-          Trip History
-        </CardTitle>
-        <CardDescription>
-          A log of your check-ins and check-outs for the current trip.
-        </CardDescription>
+        <div className="flex justify-between items-center">
+            <div>
+                <CardTitle className="flex items-center gap-2">
+                <History className="text-primary" />
+                Trip History
+                </CardTitle>
+                <CardDescription>
+                A log of your check-ins and check-outs for the current trip.
+                </CardDescription>
+            </div>
+            <Button variant="outline" size="icon" onClick={() => exportData(history, "bulletin-tracker-history.json")} disabled={history.length === 0}>
+                <Download className="h-5 w-5" />
+            </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-72">
