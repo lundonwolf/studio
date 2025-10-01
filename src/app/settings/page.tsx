@@ -311,7 +311,7 @@ export default function SettingsPage() {
                     {provided.placeholder}
                     </div>
                 )}
-            </Froppable>
+            </Droppable>
             <div className="flex gap-2">
               <Input
                 value={newSuccessfulReason}
@@ -356,7 +356,7 @@ export default function SettingsPage() {
                     {provided.placeholder}
                     </div>
                 )}
-            </Froppable>
+            </Droppable>
             <div className="flex gap-2">
               <Input
                 value={newReason}
