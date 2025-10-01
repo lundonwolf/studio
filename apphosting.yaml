@@ -9,6 +9,12 @@ build:
 run:
   command: npm run start
 
+# Add custom HTTP headers to responses.
+headers:
+  - # The Permissions-Policy header is required for geolocation to work in a deployed environment.
+    name: "Permissions-Policy"
+    value: "geolocation=*"
+
 runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
