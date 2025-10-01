@@ -16,7 +16,7 @@ export type Stop = {
   macAddress?: string;
   techInstructions: string;
   imageGallery?: string[];
-  coordinates?: {
+  coordinates: {
     latitude: number;
     longitude: number;
   };
