@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useReducer, ReactNode, Dispatch } from "react";
+import { createContext, useReducer, ReactNode, Dispatch, useEffect } from "react";
 import type { Stop, CheckoutReason } from "@/lib/types";
 import { availableStops } from "@/lib/data";
 import { defaultReasons, defaultSuccessfulReasons } from "@/lib/reasons";
@@ -18,9 +18,10 @@ type Action =
   | { type: "ADD_REASON"; payload: { text: string } }
   | { type: "DELETE_REASON"; payload: string }
   | { type: "ADD_SUCCESSFUL_REASON"; payload: { text: string } }
-  | { type: "DELETE_SUCCESSFUL_REASON"; payload: string };
+  | { type: "DELETE_SUCCESSFUL_REASON"; payload: string }
+  | { type: "HYDRATE_STATE"; payload: State };
 
-const initialState: State = {
+const defaultState: State = {
   stops: availableStops,
   reasons: defaultReasons,
   successfulReasons: defaultSuccessfulReasons,
@@ -28,6 +29,8 @@ const initialState: State = {
 
 function settingsReducer(state: State, action: Action): State {
   switch (action.type) {
+    case "HYDRATE_STATE":
+        return { ...state, ...action.payload };
     case "ADD_STOP": {
       const newStop: Stop = {
         id: `stop-${Date.now()}`,
@@ -77,8 +80,31 @@ function settingsReducer(state: State, action: Action): State {
 
 export const SettingsContext = createContext<{ state: State; dispatch: Dispatch<Action> } | undefined>(undefined);
 
+const SETTINGS_STORAGE_KEY = 'bulletin-tracker-settings';
+
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(settingsReducer, initialState);
+  const [state, dispatch] = useReducer(settingsReducer, defaultState);
+
+  // Load state from localStorage on initial render
+  useEffect(() => {
+    try {
+      const storedState = localStorage.getItem(SETTINGS_STORAGE_KEY);
+      if (storedState) {
+        dispatch({ type: 'HYDRATE_STATE', payload: JSON.parse(storedState) });
+      }
+    } catch (error) {
+      console.error("Failed to load settings from localStorage", error);
+    }
+  }, []);
+
+  // Save state to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(state));
+    } catch (error) {
+      console.error("Failed to save settings to localStorage", error);
+    }
+  }, [state]);
 
   return (
     <SettingsContext.Provider value={{ state, dispatch }}>

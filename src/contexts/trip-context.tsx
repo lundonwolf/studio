@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useReducer, ReactNode, Dispatch, useContext } from "react";
+import { createContext, useReducer, ReactNode, Dispatch, useContext, useEffect } from "react";
 import type { Stop, CheckInEvent, TripStatus, CheckOutStatus, Coordinates } from "@/lib/types";
 import { SettingsContext } from "./settings-context";
 
@@ -25,7 +25,8 @@ type Action =
   | { type: "SET_CURRENT_LOCATION"; payload: Coordinates }
   | { type: "END_TRIP"; payload: { report: string } }
   | { type: "RESET_TRIP" }
-  | { type: 'SET_STOPS', payload: Stop[] };
+  | { type: 'SET_STOPS', payload: Stop[] }
+  | { type: 'HYDRATE_TRIP_STATE', payload: Partial<State> };
 
 const initialState: Omit<State, 'allStops'> = {
   tripStatus: "planning",
@@ -40,6 +41,18 @@ const initialState: Omit<State, 'allStops'> = {
 
 function tripReducer(state: State, action: Action): State {
   switch (action.type) {
+    case 'HYDRATE_TRIP_STATE':
+        const hydratedState = { ...state, ...action.payload };
+        // Ensure dates are properly deserialized
+        if (hydratedState.tripStartTime) {
+            hydratedState.tripStartTime = new Date(hydratedState.tripStartTime);
+        }
+        hydratedState.history = hydratedState.history.map(event => ({
+            ...event,
+            timeIn: new Date(event.timeIn),
+            timeOut: event.timeOut ? new Date(event.timeOut) : null,
+        }));
+        return hydratedState;
     case 'SET_STOPS':
       return {
         ...state,
@@ -121,6 +134,7 @@ function tripReducer(state: State, action: Action): State {
       return {
         ...state,
         ...initialState,
+        allStops: state.allStops, // Keep allStops from settings
         itinerary: [],
         locationHistory: [],
       };
@@ -135,6 +149,7 @@ export const TripContext = createContext<{
     dispatch: Dispatch<Action>;
 } | undefined>(undefined);
 
+const TRIP_STORAGE_KEY = 'bulletin-tracker-trip';
 
 export function TripProvider({ children }: { children: ReactNode }) {
   const settingsContext = useContext(SettingsContext);
@@ -143,13 +158,36 @@ export function TripProvider({ children }: { children: ReactNode }) {
   }
   const { state: settingsState } = settingsContext;
 
-  const combinedInitialState = {
+  const combinedInitialState: State = {
     ...initialState,
     allStops: settingsState.stops,
   };
 
   const [state, dispatch] = useReducer(tripReducer, combinedInitialState);
-  
+
+  // Load state from localStorage on initial render
+  useEffect(() => {
+    try {
+      const storedState = localStorage.getItem(TRIP_STORAGE_KEY);
+      if (storedState) {
+        dispatch({ type: 'HYDRATE_TRIP_STATE', payload: JSON.parse(storedState) });
+      }
+    } catch (error) {
+      console.error("Failed to load trip state from localStorage", error);
+    }
+  }, []);
+
+  // Save state to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      // Don't persist allStops as it comes from settings context
+      const { allStops, ...stateToSave } = state;
+      localStorage.setItem(TRIP_STORAGE_KEY, JSON.stringify(stateToSave));
+    } catch (error) {
+      console.error("Failed to save trip state to localStorage", error);
+    }
+  }, [state]);
+
   const value = {
       state: {
           ...state,

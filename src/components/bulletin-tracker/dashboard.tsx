@@ -18,8 +18,16 @@ export default function Dashboard() {
   const { state: settingsState } = useSettings();
 
    useEffect(() => {
+    // This effect ensures that the trip context's `allStops` is
+    // always in sync with the settings context.
     dispatch({ type: 'SET_STOPS', payload: settingsState.stops });
   }, [settingsState.stops, dispatch]);
+
+  const handleResetTrip = () => {
+    dispatch({type: 'RESET_TRIP'});
+    // Also clear from localStorage for a full reset
+    localStorage.removeItem('bulletin-tracker-trip');
+  }
 
   const renderTripState = () => {
     switch (state.tripStatus) {
@@ -42,7 +50,7 @@ export default function Dashboard() {
                   {state.endOfTripReport}
                 </pre>
               </ScrollArea>
-              <Button onClick={() => dispatch({type: 'RESET_TRIP'})} className="mt-6">
+              <Button onClick={handleResetTrip} className="mt-6">
                 <RotateCcw className="mr-2 h-4 w-4" /> Start New Trip
               </Button>
             </CardContent>
