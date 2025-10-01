@@ -1,3 +1,4 @@
+
 "use client";
 
 import { createContext, useReducer, ReactNode, Dispatch, useEffect } from "react";
@@ -18,7 +19,7 @@ type Action =
   | { type: "DELETE_SUCCESSFUL_REASON"; payload: string }
   | { type: "HYDRATE_STATE"; payload: Partial<State> }
   | { type: "REORDER_ITEMS"; payload: { type: 'reasons' | 'successfulReasons' | 'stops'; sourceIndex: number; destinationIndex: number }}
-  | { type: "ADD_STOP"; payload: { stop: Omit<Stop, 'id'> } }
+  | { type: "ADD_STOP"; payload: { stop: Omit<Stop, 'id' | 'imageGallery'> } }
   | { type: "UPDATE_STOP"; payload: Stop }
   | { type: "DELETE_STOP"; payload: string };
 
@@ -127,3 +128,5 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     </SettingsContext.Provider>
   );
 }
+
+    

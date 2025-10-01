@@ -1,19 +1,20 @@
+
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useSettings } from "@/hooks/use-settings";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, PlusCircle, ArrowLeft, Download, GripVertical, Edit, Save, X, Loader2 } from "lucide-react";
+import { Trash2, PlusCircle, ArrowLeft, Download, GripVertical, Edit, Save, X, Loader2, Upload } from "lucide-react";
 import type { CheckoutReason, Stop } from '@/lib/types';
 import Link from 'next/link';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { geocodeAddress } from '@/ai/flows/geocode-address';
 import { useToast } from '@/hooks/use-toast';
 
-const initialStopFormState: Omit<Stop, 'id' | 'imageGallery' | 'coordinates'> = {
+const initialStopFormState: Omit<Stop, 'id' | 'imageGallery'> = {
     propertyName: "",
     address: "",
     screenLocation: "",
@@ -23,17 +24,19 @@ const initialStopFormState: Omit<Stop, 'id' | 'imageGallery' | 'coordinates'> = 
     wifiPassword: "",
     macAddress: "",
     techInstructions: "",
+    coordinates: { latitude: 0, longitude: 0 },
 };
 
 export default function SettingsPage() {
   const { state, dispatch } = useSettings();
   const { stops, reasons, successfulReasons } = state;
   const { toast } = useToast();
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   // Stop state
   const [isAdding, setIsAdding] = useState(false);
   const [editingStopId, setEditingStopId] = useState<string | null>(null);
-  const [stopFormState, setStopFormState] = useState<Omit<Stop, 'id' | 'imageGallery' | 'coordinates'>>(initialStopFormState);
+  const [stopFormState, setStopFormState] = useState<Omit<Stop, 'id' | 'imageGallery'>>(initialStopFormState);
   const [isGeocoding, setIsGeocoding] = useState(false);
 
   // Reasons state
@@ -51,7 +54,7 @@ export default function SettingsPage() {
     dispatch({ type: 'REORDER_ITEMS', payload: { type: itemType, sourceIndex: source.index, destinationIndex: destination.index } });
   };
   
-  const processStop = async (stopData: Omit<Stop, 'id' | 'imageGallery' | 'coordinates'>) => {
+  const processStop = async (stopData: Omit<Stop, 'id' | 'imageGallery'>) => {
     setIsGeocoding(true);
     try {
       const coords = await geocodeAddress({ address: stopData.address });
@@ -81,7 +84,7 @@ export default function SettingsPage() {
   const handleUpdateStop = async (id: string) => {
     const updatedStopData = await processStop(stopFormState);
     if (updatedStopData) {
-      dispatch({ type: "UPDATE_STOP", payload: { id, ...updatedStopData } });
+      dispatch({ type: "UPDATE_STOP", payload: { id, ...updatedStopData } as Stop });
       setEditingStopId(null);
       setStopFormState(initialStopFormState);
     }
@@ -89,7 +92,7 @@ export default function SettingsPage() {
 
   const handleEditClick = (stop: Stop) => {
     setEditingStopId(stop.id);
-    const { id, imageGallery, coordinates, ...editableStop } = stop;
+    const { id, imageGallery, ...editableStop } = stop;
     setStopFormState(editableStop);
   };
 
@@ -101,14 +104,17 @@ export default function SettingsPage() {
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    if (name.startsWith("contact.")) {
+     if (name.startsWith("contact.")) {
         const field = name.split('.')[1];
         setStopFormState(prev => ({ ...prev, contact: { ...prev.contact, [field]: value } }));
-    } else {
+    } else if (name.startsWith("coordinates.")) {
+        const field = name.split('.')[1] as 'latitude' | 'longitude';
+        setStopFormState(prev => ({ ...prev, coordinates: { ...prev.coordinates, [field]: parseFloat(value) } }));
+    }
+     else {
         setStopFormState(prev => ({ ...prev, [name]: value }));
     }
   };
-
 
   // Handlers for Reasons
   const handleAddReason = () => {
@@ -125,15 +131,59 @@ export default function SettingsPage() {
     }
   };
 
-   const exportData = (data: any, fileName: string) => {
+   const handleExport = () => {
+    const settingsData = {
+        stops,
+        reasons,
+        successfulReasons,
+    };
     const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(data, null, 2)
+      JSON.stringify(settingsData, null, 2)
     )}`;
     const link = document.createElement("a");
     link.href = jsonString;
-    link.download = fileName;
+    link.download = "bulletin-tracker-settings.json";
     link.click();
+     toast({ title: "Settings Exported", description: "Your settings have been saved to a file." });
   };
+  
+   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const text = e.target?.result;
+            if (typeof text !== 'string') {
+                throw new Error("File is not readable.");
+            }
+            const importedState = JSON.parse(text);
+            
+            // Validate imported data structure
+            const hasStops = Array.isArray(importedState.stops);
+            const hasReasons = Array.isArray(importedState.reasons);
+            const hasSuccessfulReasons = Array.isArray(importedState.successfulReasons);
+
+            if (hasStops || hasReasons || hasSuccessfulReasons) {
+                 dispatch({ type: 'HYDRATE_STATE', payload: importedState });
+                 toast({ title: "Settings Imported", description: "Your settings have been successfully loaded." });
+            } else {
+                 toast({ title: "Import Failed", description: "The selected file does not have a valid format.", variant: "destructive" });
+            }
+        } catch (error) {
+            console.error("Failed to parse imported file:", error);
+            toast({ title: "Import Failed", description: "The selected file is not valid JSON.", variant: "destructive" });
+        } finally {
+            // Reset input value to allow re-importing the same file
+            if(importInputRef.current) {
+                importInputRef.current.value = "";
+            }
+        }
+    };
+    reader.readAsText(file);
+  };
+
 
   const renderStopForm = (isEditing: boolean) => (
     <Card className="col-span-full">
@@ -141,13 +191,13 @@ export default function SettingsPage() {
             <CardTitle>{isEditing ? 'Edit Stop' : 'Add New Stop'}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Object.keys(stopFormState).map(key => {
+            {Object.keys(stopFormState).filter(k => k !== 'coordinates').map(key => {
                 const fieldKey = key as keyof Omit<Stop, 'id' | 'imageGallery' | 'coordinates'>;
                 if (typeof stopFormState[fieldKey] === 'object') {
                     if (fieldKey === 'contact') {
                         return Object.keys(stopFormState.contact).map(contactKey => (
                             <div className="space-y-2" key={`contact-${contactKey}`}>
-                                <Label htmlFor={`contact.${contactKey}`}>Contact {contactKey}</Label>
+                                <Label htmlFor={`contact.${contactKey}`}>Contact {contactKey.charAt(0).toUpperCase() + contactKey.slice(1)}</Label>
                                 <Input id={`contact.${contactKey}`} name={`contact.${contactKey}`} value={stopFormState.contact[contactKey as keyof typeof stopFormState.contact]} onChange={handleFormChange} disabled={isGeocoding}/>
                             </div>
                         ));
@@ -186,13 +236,25 @@ export default function SettingsPage() {
             </Button>
             <h1 className="text-3xl font-bold">Settings</h1>
         </div>
+        
+        <Card className="mb-8">
+            <CardHeader>
+                <CardTitle>Import & Export Data</CardTitle>
+                <CardDescription>Save your settings to a file or load settings from a backup.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex gap-4">
+                 <input type="file" ref={importInputRef} onChange={handleImport} accept="application/json" className="hidden" />
+                 <Button onClick={() => importInputRef.current?.click()} variant="outline"><Upload className="mr-2 h-5 w-5"/> Import Settings</Button>
+                 <Button onClick={handleExport}><Download className="mr-2 h-5 w-5"/> Export All Settings</Button>
+            </CardContent>
+        </Card>
+
 
       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
         
         {isAdding && renderStopForm(false)}
         {editingStopId && !isAdding && renderStopForm(true)}
         
-        {/* Manage Locations */}
         <Card className="lg:col-span-3">
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -202,9 +264,6 @@ export default function SettingsPage() {
                 </div>
                  <div className="flex items-center gap-2">
                     <Button onClick={() => setIsAdding(true)}><PlusCircle className="h-5 w-5"/></Button>
-                    <Button variant="outline" size="icon" onClick={() => exportData(stops, "bulletin-tracker-locations.json")}>
-                        <Download className="h-5 w-5" />
-                    </Button>
                  </div>
             </div>
           </CardHeader>
@@ -335,3 +394,5 @@ export default function SettingsPage() {
     </DragDropContext>
   );
 }
+
+    
