@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import Image from "next/image";
 import { useTrip } from "@/hooks/use-trip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Compass, LocateFixed, Waypoints } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { haversineDistance } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const GEOFENCE_RADIUS_METERS = 100; // in meters, haversineDistance now returns miles
 
@@ -15,7 +14,6 @@ export function MapView() {
   const { state, dispatch } = useTrip();
   const { currentLocation, activeStopIndex, itinerary, history } = state;
   const { toast } = useToast();
-  const mapPlaceholder = PlaceHolderImages.find(img => img.id === 'map-placeholder');
 
   useEffect(() => {
     if (!("geolocation" in navigator)) {
@@ -58,6 +56,11 @@ export function MapView() {
     }
 
   }, [currentLocation, activeStopIndex, itinerary, history, state.tripStatus, toast]);
+  
+  const mapSrc = currentLocation
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${currentLocation.longitude-0.01},${currentLocation.latitude-0.01},${currentLocation.longitude+0.01},${currentLocation.latitude+0.01}&layer=mapnik&marker=${currentLocation.latitude},${currentLocation.longitude}`
+    : null;
+
 
   return (
     <Card>
@@ -68,17 +71,23 @@ export function MapView() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {mapPlaceholder && (
-          <div className="aspect-[4/3] w-full rounded-lg overflow-hidden relative shadow-md">
-            <Image
-              src={mapPlaceholder.imageUrl}
-              alt={mapPlaceholder.description}
-              fill
-              style={{ objectFit: 'cover' }}
-              data-ai-hint={mapPlaceholder.imageHint}
+        <div className="aspect-[4/3] w-full rounded-lg overflow-hidden relative shadow-md bg-muted">
+          {mapSrc ? (
+            <iframe
+              width="100%"
+              height="100%"
+              frameBorder="0"
+              scrolling="no"
+              marginHeight={0}
+              marginWidth={0}
+              src={mapSrc}
+              style={{ border: 'none' }}
+              title="Live Map"
             />
-          </div>
-        )}
+          ) : (
+             <Skeleton className="h-full w-full" />
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-4 text-center">
             <div className="p-3 bg-secondary/50 rounded-lg">
                 <p className="text-sm text-muted-foreground flex items-center justify-center gap-2"><LocateFixed size={14} /> Latitude</p>
