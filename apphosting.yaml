@@ -8,6 +8,9 @@ build:
 # The command to run your app on the server.
 run:
   command: npm run start
+  secrets:
+    - secret: GOOGLE_MAPS_API_KEY
+      env: GOOGLE_MAPS_API_KEY
 
 runConfig:
   # Increase this value if you'd like to automatically spin up
