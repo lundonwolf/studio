@@ -1,11 +1,108 @@
 "use client";
 
+import { useState } from "react";
 import { useTrip } from "@/hooks/use-trip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { List, MapPin, PlusCircle, Trash2, Play, GripVertical } from "lucide-react";
+import { List, MapPin, PlusCircle, Trash2, Play, GripVertical, Clock, Sparkles, Loader2, TrafficCone } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { predictTravelTime, PredictTravelTimeOutput } from "@/ai/flows/predict-travel-time";
+import { useToast } from "@/hooks/use-toast";
+import { Input } from "../ui/input";
+
+function TrafficPredictor() {
+    const { state } = useTrip();
+    const { itinerary, currentLocation } = state;
+    const { toast } = useToast();
+    const [departureTime, setDepartureTime] = useState(() => {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() + 15); // Default to 15 mins from now
+        return now.toTimeString().slice(0,5);
+    });
+    const [isLoading, setIsLoading] = useState(false);
+    const [prediction, setPrediction] = useState<PredictTravelTimeOutput | null>(null);
+
+    const handlePrediction = async () => {
+        if (!currentLocation) {
+            toast({
+                title: "Current Location Unknown",
+                description: "Cannot make a prediction without your current location.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setIsLoading(true);
+        setPrediction(null);
+        try {
+            const firstStop = itinerary[0];
+            const [hours, minutes] = departureTime.split(':');
+            const departureDate = new Date();
+            departureDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+
+            const result = await predictTravelTime({
+                startAddress: "My Current Location", // AI can infer from context or just use it as a label
+                endAddress: firstStop.address,
+                departureTime: departureDate.toISOString(),
+            });
+            setPrediction(result);
+
+        } catch (error) {
+            console.error("Traffic prediction failed", error);
+            toast({
+                title: "Prediction Failed",
+                description: "Could not generate a traffic prediction. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    if (itinerary.length === 0) {
+        return null;
+    }
+
+    return (
+        <Card className="md:col-span-2">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <TrafficCone className="text-primary" />
+                    Traffic Predictor
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                    Estimate travel time to your first stop (<span className="font-semibold">{itinerary[0].propertyName}</span>) based on typical traffic.
+                </p>
+                <div className="flex items-end gap-4">
+                    <div className="flex-grow">
+                        <label htmlFor="departure-time" className="text-sm font-medium">Departure Time</label>
+                        <Input
+                            id="departure-time"
+                            type="time"
+                            value={departureTime}
+                            onChange={(e) => setDepartureTime(e.target.value)}
+                            className="mt-1"
+                        />
+                    </div>
+                    <Button onClick={handlePrediction} disabled={isLoading}>
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                        Predict
+                    </Button>
+                </div>
+                {prediction && (
+                    <div className="p-4 bg-secondary rounded-lg space-y-2">
+                        <h4 className="font-semibold">Prediction Result:</h4>
+                        <p><Clock className="inline-block mr-2 h-4 w-4" /> Estimated Duration: <span className="font-bold">{prediction.estimatedDuration} minutes</span></p>
+                        <p className="text-sm text-muted-foreground">{prediction.trafficSummary}</p>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
 
 export function TripPlanner() {
   const { state, dispatch } = useTrip();
@@ -116,6 +213,8 @@ export function TripPlanner() {
           </Button>
         </CardFooter>
       </Card>
+
+      <TrafficPredictor />
     </div>
     </DragDropContext>
   );
