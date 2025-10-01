@@ -3,3 +3,4 @@ config();
 
 import '@/ai/flows/generate-location-report.ts';
 import '@/ai/flows/generate-end-of-trip-report.ts';
+import '@/ai/flows/geocode-address.ts';

@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, PlusCircle, ArrowLeft, Download, GripVertical, Edit, Save, X } from "lucide-react";
+import { Trash2, PlusCircle, ArrowLeft, Download, GripVertical, Edit, Save, X, Loader2 } from "lucide-react";
 import type { CheckoutReason, Stop } from '@/lib/types';
 import Link from 'next/link';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { geocodeAddress } from '@/ai/flows/geocode-address';
+import { useToast } from '@/hooks/use-toast';
 
-const initialStopFormState = {
+const initialStopFormState: Omit<Stop, 'id' | 'imageGallery' | 'coordinates'> = {
     propertyName: "",
     address: "",
     screenLocation: "",
@@ -26,11 +28,13 @@ const initialStopFormState = {
 export default function SettingsPage() {
   const { state, dispatch } = useSettings();
   const { stops, reasons, successfulReasons } = state;
+  const { toast } = useToast();
 
   // Stop state
   const [isAdding, setIsAdding] = useState(false);
   const [editingStopId, setEditingStopId] = useState<string | null>(null);
   const [stopFormState, setStopFormState] = useState<Omit<Stop, 'id' | 'imageGallery' | 'coordinates'>>(initialStopFormState);
+  const [isGeocoding, setIsGeocoding] = useState(false);
 
   // Reasons state
   const [newReason, setNewReason] = useState("");
@@ -47,17 +51,40 @@ export default function SettingsPage() {
     dispatch({ type: 'REORDER_ITEMS', payload: { type: itemType, sourceIndex: source.index, destinationIndex: destination.index } });
   };
   
-  // Handlers for Stops
-  const handleAddStop = () => {
-    dispatch({ type: "ADD_STOP", payload: stopFormState });
-    setStopFormState(initialStopFormState);
-    setIsAdding(false);
+  const processStop = async (stopData: Omit<Stop, 'id' | 'imageGallery' | 'coordinates'>) => {
+    setIsGeocoding(true);
+    try {
+      const coords = await geocodeAddress({ address: stopData.address });
+      setIsGeocoding(false);
+      return { ...stopData, coordinates: coords };
+    } catch (error) {
+      console.error("Geocoding failed:", error);
+      toast({
+        title: "Geocoding Failed",
+        description: "Could not find coordinates for the address. Please check the address and try again.",
+        variant: "destructive"
+      });
+      setIsGeocoding(false);
+      return null;
+    }
+  }
+
+  const handleAddStop = async () => {
+    const newStopData = await processStop(stopFormState);
+    if (newStopData) {
+      dispatch({ type: "ADD_STOP", payload: { stop: newStopData } });
+      setStopFormState(initialStopFormState);
+      setIsAdding(false);
+    }
   };
   
-  const handleUpdateStop = (id: string) => {
-    dispatch({ type: "UPDATE_STOP", payload: { id, ...stopFormState } });
-    setEditingStopId(null);
-    setStopFormState(initialStopFormState);
+  const handleUpdateStop = async (id: string) => {
+    const updatedStopData = await processStop(stopFormState);
+    if (updatedStopData) {
+      dispatch({ type: "UPDATE_STOP", payload: { id, ...updatedStopData } });
+      setEditingStopId(null);
+      setStopFormState(initialStopFormState);
+    }
   };
 
   const handleEditClick = (stop: Stop) => {
@@ -121,7 +148,7 @@ export default function SettingsPage() {
                         return Object.keys(stopFormState.contact).map(contactKey => (
                             <div className="space-y-2" key={`contact-${contactKey}`}>
                                 <Label htmlFor={`contact.${contactKey}`}>Contact {contactKey}</Label>
-                                <Input id={`contact.${contactKey}`} name={`contact.${contactKey}`} value={stopFormState.contact[contactKey as keyof typeof stopFormState.contact]} onChange={handleFormChange} />
+                                <Input id={`contact.${contactKey}`} name={`contact.${contactKey}`} value={stopFormState.contact[contactKey as keyof typeof stopFormState.contact]} onChange={handleFormChange} disabled={isGeocoding}/>
                             </div>
                         ));
                     }
@@ -130,15 +157,19 @@ export default function SettingsPage() {
                 return (
                     <div className="space-y-2" key={fieldKey}>
                         <Label htmlFor={fieldKey}>{fieldKey.split(/(?=[A-Z])/).join(" ")}</Label>
-                        <Input id={fieldKey} name={fieldKey} value={stopFormState[fieldKey]} onChange={handleFormChange} />
+                        <Input id={fieldKey} name={fieldKey} value={stopFormState[fieldKey]} onChange={handleFormChange} disabled={isGeocoding} />
                     </div>
                 );
             })}
         </CardContent>
         <CardContent>
             <div className="flex gap-2 justify-end">
-                <Button variant="ghost" onClick={handleCancelEdit}><X className="h-5 w-5 mr-2"/>Cancel</Button>
-                <Button onClick={() => isEditing ? handleUpdateStop(editingStopId!) : handleAddStop()}><Save className="h-5 w-5 mr-2"/>{isEditing ? 'Save Changes' : 'Add Stop'}</Button>
+                <Button variant="ghost" onClick={handleCancelEdit} disabled={isGeocoding}><X className="h-5 w-5 mr-2"/>Cancel</Button>
+                <Button onClick={() => isEditing ? handleUpdateStop(editingStopId!) : handleAddStop()} disabled={isGeocoding}>
+                  {isGeocoding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <Save className="h-5 w-5 mr-2"/>
+                  {isEditing ? 'Save Changes' : 'Add Stop'}
+                </Button>
             </div>
         </CardContent>
     </Card>

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useReducer, ReactNode, Dispatch, useEffect } from "react";
-import type { Stop, CheckoutReason } from "@/lib/types";
+import type { Stop, CheckoutReason, Coordinates } from "@/lib/types";
 import { availableStops as defaultStops } from "@/lib/data";
 import { defaultReasons, defaultSuccessfulReasons } from "@/lib/reasons";
 
@@ -18,8 +18,8 @@ type Action =
   | { type: "DELETE_SUCCESSFUL_REASON"; payload: string }
   | { type: "HYDRATE_STATE"; payload: Partial<State> }
   | { type: "REORDER_ITEMS"; payload: { type: 'reasons' | 'successfulReasons' | 'stops'; sourceIndex: number; destinationIndex: number }}
-  | { type: "ADD_STOP"; payload: Omit<Stop, 'id' | 'coordinates'> }
-  | { type: "UPDATE_STOP"; payload: Omit<Stop, 'coordinates'> }
+  | { type: "ADD_STOP"; payload: { stop: Omit<Stop, 'id'> } }
+  | { type: "UPDATE_STOP"; payload: Stop }
   | { type: "DELETE_STOP"; payload: string };
 
 const defaultState: State = {
@@ -66,14 +66,14 @@ function settingsReducer(state: State, action: Action): State {
     case 'ADD_STOP': {
       const newStop: Stop = {
         id: `stop-${Date.now()}`,
-        ...action.payload,
+        ...action.payload.stop,
       };
       return { ...state, stops: [...state.stops, newStop] };
     }
     case 'UPDATE_STOP': {
       return {
         ...state,
-        stops: state.stops.map(stop => stop.id === action.payload.id ? {...stop, ...action.payload} : stop),
+        stops: state.stops.map(stop => stop.id === action.payload.id ? action.payload : stop),
       };
     }
     case 'DELETE_STOP':
