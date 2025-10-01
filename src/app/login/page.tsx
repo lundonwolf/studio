@@ -169,7 +169,7 @@ export default function LoginPage() {
                 Sign Up
               </Button>
             </CardFooter>
-          </card>
+          </Card>
         </TabsContent>
       </Tabs>
       </div>
