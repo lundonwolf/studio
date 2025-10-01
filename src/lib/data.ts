@@ -5,6 +5,7 @@ export const availableStops: Stop[] = [
     id: 'stop-1',
     propertyName: 'Oakwood Apartments',
     address: '123 Oak St, Springfield, IL',
+    screenLocation: 'Main lobby, behind the reception desk.',
     contact: {
       name: 'John Smith',
       email: 'john.smith@oakwood.com',
@@ -13,7 +14,7 @@ export const availableStops: Stop[] = [
     macAddress: '00:1B:44:11:3A:B7',
     screenId: 'OAK-LOBBY-01',
     wifiSsid: 'OakwoodGuest',
-    techInstructions: 'Screen is located in the main lobby, behind the reception desk. Check for pixelation issues.',
+    techInstructions: 'Check for pixelation issues.',
     imageGallery: [
         'https://picsum.photos/seed/1/600/400',
         'https://picsum.photos/seed/2/600/400',
@@ -25,6 +26,7 @@ export const availableStops: Stop[] = [
     id: 'stop-2',
     propertyName: 'Maple Creek Complex',
     address: '456 Maple Ave, Springfield, IL',
+    screenLocation: 'Recreation room, near the pool table.',
     contact: {
       name: 'Jane Doe',
       email: 'jane.doe@maplecreek.com',
@@ -33,13 +35,14 @@ export const availableStops: Stop[] = [
     screenId: 'MAP-REC-01',
     wifiSsid: 'MapleCreekWiFi',
     wifiPassword: 'password123',
-    techInstructions: 'Rec room screen. Requires special remote (ask front desk). Verify remote connectivity.',
+    techInstructions: 'Requires special remote (ask front desk). Verify remote connectivity.',
     coordinates: { latitude: 39.7900, longitude: -89.6445 },
   },
   {
     id: 'stop-3',
     propertyName: 'Willow Creek Towers',
     address: '789 Willow Ln, Springfield, IL',
+    screenLocation: 'Elevator bank A, middle screen.',
     contact: {
       name: 'Peter Jones',
       email: 'p.jones@willowtowers.com',
@@ -47,13 +50,14 @@ export const availableStops: Stop[] = [
     },
     screenId: 'WILLOW-ELEV-01',
     wifiSsid: 'WillowGuest',
-    techInstructions: 'Elevator screen, bank A. Needs a firmware update. Follow SOP-FW-03.',
+    techInstructions: 'Needs a firmware update. Follow SOP-FW-03.',
     coordinates: { latitude: 39.7750, longitude: -89.6600 },
   },
   {
     id: 'stop-4',
     propertyName: 'Pine Ridge Estates',
     address: '101 Pine Dr, Springfield, IL',
+    screenLocation: 'Main gate entrance, mounted on the left brick pillar.',
     contact: {
       name: 'Mary Williams',
       email: 'mary.w@pineridge.com',
@@ -62,7 +66,7 @@ export const availableStops: Stop[] = [
     screenId: 'PINE-GATE-01',
     wifiSsid: 'PineRidgeSecure',
     wifiPassword: 'securepassword',
-    techInstructions: 'Main gate entrance screen. Check for weather damage to enclosure.',
+    techInstructions: 'Check for weather damage to enclosure.',
     coordinates: { latitude: 39.8011, longitude: -89.6587 },
   },
 ];

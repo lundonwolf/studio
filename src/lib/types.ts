@@ -8,6 +8,7 @@ export type Stop = {
   id: string;
   propertyName: string;
   address: string;
+  screenLocation: string;
   contact: Contact;
   screenId: string;
   wifiSsid: string;

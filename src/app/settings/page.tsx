@@ -50,6 +50,8 @@ const LocationForm = ({
             <Input placeholder="e.g., Downtown Mall" value={stop.propertyName || ''} onChange={e => handleChange('propertyName', e.target.value)} />
             <Label>Address</Label>
             <Input placeholder="e.g., 123 Main St" value={stop.address || ''} onChange={e => handleChange('address', e.target.value)} />
+            <Label>Screen Location</Label>
+            <Input placeholder="e.g., Lobby, near the entrance" value={stop.screenLocation || ''} onChange={e => handleChange('screenLocation', e.target.value)} />
           </AccordionContent>
         </AccordionItem>
         <AccordionItem value="connection">
@@ -130,6 +132,7 @@ export default function SettingsPage() {
       const stopToAdd: Omit<Stop, 'id' | 'coordinates'> = {
         propertyName: newStop.propertyName || '',
         address: newStop.address || '',
+        screenLocation: newStop.screenLocation || '',
         contact: {
             name: newStop.contact?.name || '',
             email: newStop.contact?.email || '',

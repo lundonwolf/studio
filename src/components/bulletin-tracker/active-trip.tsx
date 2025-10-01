@@ -15,6 +15,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import { Separator } from "../ui/separator";
 
 export function ActiveTrip() {
   const { state, dispatch } = useTrip();
@@ -68,9 +69,18 @@ export function ActiveTrip() {
             )}
 
           <div className="flex items-center gap-2 text-muted-foreground"><MapPin size={16} /> {currentStop.address}</div>
-          <div className="flex items-center gap-2 text-muted-foreground"><Clipboard size={16} /> Screen ID: {currentStop.screenId}</div>
-          {currentStop.macAddress && <div className="flex items-center gap-2 text-muted-foreground"><HardDrive size={16} /> MAC: {currentStop.macAddress}</div>}
-          <div className="flex items-center gap-2 text-muted-foreground"><Wifi size={16} /> Wi-Fi: {currentStop.wifiSsid}</div>
+          {currentStop.screenLocation && <div className="text-sm text-muted-foreground pl-6">↳ {currentStop.screenLocation}</div>}
+          
+          <Separator />
+
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-muted-foreground">
+            <div className="flex items-center gap-2"><Clipboard size={16} /> Screen ID: {currentStop.screenId}</div>
+            {currentStop.macAddress && <div className="flex items-center gap-2"><HardDrive size={16} /> MAC: {currentStop.macAddress}</div>}
+            <div className="flex items-center gap-2 col-span-2"><Wifi size={16} /> Wi-Fi: {currentStop.wifiSsid}</div>
+          </div>
+          
+          <Separator />
+          
           <div className="p-3 bg-secondary/50 rounded-lg">
             <h4 className="font-semibold flex items-center gap-2"><Info size={16} /> Tech Instructions</h4>
             <p className="text-muted-foreground text-sm mt-1">{currentStop.techInstructions}</p>
