@@ -83,35 +83,57 @@ export function MapView() {
   }, [currentLocation, activeStopIndex, itinerary, history, state.tripStatus, toast]);
 
   useEffect(() => {
-    const allPoints = [...itinerary.map(s => s.coordinates), ...(currentLocation ? [currentLocation] : [])];
+    const itineraryStops = itinerary.map(stop => stop.coordinates);
+    const allPoints = [...itineraryStops, ...(currentLocation ? [currentLocation] : [])];
+    
+    // Don't render a map if there's no itinerary and no current location
     if (allPoints.length === 0) {
       setMapUrl(null);
       return;
     }
 
-    const stopMarkers = itinerary.map((stop, index) => {
-      const label = index + 1;
-      return `pin-l-marker+0074D9(${stop.coordinates.longitude},${stop.coordinates.latitude})`;
+    let markers = itinerary.map((stop, index) => {
+        const label = index + 1;
+        return `pin-l-marker+0074D9(${stop.coordinates.longitude},${stop.coordinates.latitude})`
     }).join(',');
+    
+    if (currentLocation) {
+        const userMarker = `pin-s-star+F54748(${currentLocation.longitude},${currentLocation.latitude})`;
+        markers = [markers, userMarker].filter(Boolean).join(',');
+    }
+    
+    let bbox;
+    if (allPoints.length > 1) {
+        const lats = allPoints.map(p => p.latitude);
+        const lons = allPoints.map(p => p.longitude);
+        const minLat = Math.min(...lats);
+        const maxLat = Math.max(...lats);
+        const minLon = Math.min(...lons);
+        const maxLon = Math.max(...lons);
+        const buffer = Math.max(Math.abs(maxLat - minLat), Math.abs(maxLon - minLon)) * 0.1 || 0.01;
+        bbox = `${minLon - buffer},${minLat - buffer},${maxLon + buffer},${maxLat + buffer}`;
+    } else if (allPoints.length === 1) {
+        const center = allPoints[0];
+        const buffer = 0.01;
+        bbox = `${center.longitude - buffer},${center.latitude - buffer},${center.longitude + buffer},${center.latitude + buffer}`;
+    }
 
-    const userMarker = currentLocation ? `pin-s-star+F54748(${currentLocation.longitude},${currentLocation.latitude})` : '';
-    const markers = [stopMarkers, userMarker].filter(Boolean).join(',');
-
-    // If there is more than one point, calculate bounding box
-    if(allPoints.length > 1) {
-      const lats = allPoints.map(p => p.latitude);
-      const lons = allPoints.map(p => p.longitude);
-      const minLat = Math.min(...lats);
-      const maxLat = Math.max(...lats);
-      const minLon = Math.min(...lons);
-      const maxLon = Math.max(...lons);
-      
-      const buffer = 0.01;
-      const bbox = `${minLon-buffer},${minLat-buffer},${maxLon+buffer},${maxLat+buffer}`;
-      setMapUrl(`https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${currentLocation ? `${currentLocation.latitude},${currentLocation.longitude}` : ''}`);
-    } else {
-      const center = allPoints[0];
-      setMapUrl(`https://www.openstreetmap.org/export/embed.html?bbox=${center.longitude-0.01},${center.latitude-0.01},${center.longitude+0.01},${center.latitude+0.01}&layer=mapnik&marker=${center.latitude},${center.longitude}`);
+    if (bbox) {
+        const url = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik`;
+        const finalMarkers = itinerary.map((stop, index) => `${stop.coordinates.latitude},${stop.coordinates.longitude}`).join(';');
+        
+        // The embed map from openstreetmap has some limitations with markers.
+        // A single marker can be added with `&marker=lat,lon`.
+        // For multiple markers, we're better off just showing the bounding box.
+        // The directions link will show all markers.
+        if (allPoints.length === 1 && currentLocation) {
+             setMapUrl(`${url}&marker=${currentLocation.latitude},${currentLocation.longitude}`);
+        } else if (allPoints.length === 1 && itinerary.length === 1) {
+             setMapUrl(`${url}&marker=${itinerary[0].coordinates.latitude},${itinerary[0].coordinates.longitude}`);
+        }
+        else {
+             setMapUrl(url);
+        }
     }
 
   }, [itinerary, currentLocation]);
@@ -157,7 +179,9 @@ export function MapView() {
               title="Live Map"
             />
           ) : (
-             <Skeleton className="h-full w-full" />
+             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-4">
+                <p>Add stops to your itinerary to see them on the map.</p>
+             </div>
           )}
         </div>
         <div className="grid grid-cols-2 gap-4 text-center">
