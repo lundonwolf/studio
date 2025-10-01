@@ -2,7 +2,7 @@
 "use client";
 
 import { createContext, useReducer, ReactNode, Dispatch, useEffect } from "react";
-import type { Stop, CheckoutReason, Coordinates } from "@/lib/types";
+import type { Stop, CheckoutReason } from "@/lib/types";
 import { availableStops as defaultStops } from "@/lib/data";
 import { defaultReasons, defaultSuccessfulReasons } from "@/lib/reasons";
 
@@ -10,6 +10,7 @@ type State = {
   stops: Stop[];
   reasons: CheckoutReason[];
   successfulReasons: CheckoutReason[];
+  homeAddress: string;
 };
 
 type Action =
@@ -19,14 +20,13 @@ type Action =
   | { type: "DELETE_SUCCESSFUL_REASON"; payload: string }
   | { type: "HYDRATE_STATE"; payload: Partial<State> }
   | { type: "REORDER_ITEMS"; payload: { type: 'reasons' | 'successfulReasons' | 'stops'; sourceIndex: number; destinationIndex: number }}
-  | { type: "ADD_STOP"; payload: { stop: Omit<Stop, 'id' | 'imageGallery'> } }
-  | { type: "UPDATE_STOP"; payload: Stop }
-  | { type: "DELETE_STOP"; payload: string };
+  | { type: "UPDATE_HOME_ADDRESS"; payload: string };
 
 const defaultState: State = {
   stops: defaultStops,
   reasons: defaultReasons,
   successfulReasons: defaultSuccessfulReasons,
+  homeAddress: "23806 77th PL W, Edmonds, WA 98026",
 };
 
 function settingsReducer(state: State, action: Action): State {
@@ -64,24 +64,8 @@ function settingsReducer(state: State, action: Action): State {
       list.splice(destinationIndex, 0, removed);
       return { ...state, [type]: list };
     }
-    case 'ADD_STOP': {
-      const newStop: Stop = {
-        id: `stop-${Date.now()}`,
-        ...action.payload.stop,
-      };
-      return { ...state, stops: [...state.stops, newStop] };
-    }
-    case 'UPDATE_STOP': {
-      return {
-        ...state,
-        stops: state.stops.map(stop => stop.id === action.payload.id ? action.payload : stop),
-      };
-    }
-    case 'DELETE_STOP':
-      return {
-        ...state,
-        stops: state.stops.filter(stop => stop.id !== action.payload),
-      };
+    case 'UPDATE_HOME_ADDRESS':
+      return { ...state, homeAddress: action.payload };
     default:
       return state;
   }
@@ -105,6 +89,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             stops: loadedState.stops || defaultState.stops,
             reasons: loadedState.reasons || defaultState.reasons,
             successfulReasons: loadedState.successfulReasons || defaultState.successfulReasons,
+            homeAddress: loadedState.homeAddress || defaultState.homeAddress,
         }
         dispatch({ type: 'HYDRATE_STATE', payload: stateToHydrate });
       }
@@ -128,5 +113,3 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     </SettingsContext.Provider>
   );
 }
-
-    

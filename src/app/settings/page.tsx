@@ -1,47 +1,35 @@
 
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSettings } from "@/hooks/use-settings";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, PlusCircle, ArrowLeft, Download, GripVertical, Edit, Save, X, Loader2, Upload } from "lucide-react";
+import { Trash2, PlusCircle, ArrowLeft, Download, GripVertical, Edit, Save, X, Loader2, Upload, Home } from "lucide-react";
 import type { CheckoutReason, Stop } from '@/lib/types';
 import Link from 'next/link';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { geocodeAddress } from '@/ai/flows/geocode-address';
 import { useToast } from '@/hooks/use-toast';
-
-const initialStopFormState: Omit<Stop, 'id' | 'imageGallery'> = {
-    propertyName: "",
-    address: "",
-    screenLocation: "",
-    contact: { name: "", email: "", phone: "" },
-    screenId: "",
-    wifiSsid: "",
-    wifiPassword: "",
-    macAddress: "",
-    techInstructions: "",
-    coordinates: { latitude: 0, longitude: 0 },
-};
 
 export default function SettingsPage() {
   const { state, dispatch } = useSettings();
-  const { stops, reasons, successfulReasons } = state;
+  const { stops, reasons, successfulReasons, homeAddress } = state;
   const { toast } = useToast();
   const importInputRef = useRef<HTMLInputElement>(null);
 
-  // Stop state
-  const [isAdding, setIsAdding] = useState(false);
-  const [editingStopId, setEditingStopId] = useState<string | null>(null);
-  const [stopFormState, setStopFormState] = useState<Omit<Stop, 'id' | 'imageGallery'>>(initialStopFormState);
-  const [isGeocoding, setIsGeocoding] = useState(false);
+  // Home Address State
+  const [editingHomeAddress, setEditingHomeAddress] = useState(false);
+  const [homeAddressForm, setHomeAddressForm] = useState(homeAddress);
 
   // Reasons state
   const [newReason, setNewReason] = useState("");
   const [newSuccessfulReason, setNewSuccessfulReason] = useState("");
+
+  useEffect(() => {
+    setHomeAddressForm(homeAddress);
+  }, [homeAddress]);
   
   const handleDragEnd = (result: DropResult) => {
     const { source, destination, type } = result;
@@ -54,67 +42,12 @@ export default function SettingsPage() {
     dispatch({ type: 'REORDER_ITEMS', payload: { type: itemType, sourceIndex: source.index, destinationIndex: destination.index } });
   };
   
-  const processStop = async (stopData: Omit<Stop, 'id' | 'imageGallery'>) => {
-    setIsGeocoding(true);
-    try {
-      const coords = await geocodeAddress({ address: stopData.address });
-      setIsGeocoding(false);
-      return { ...stopData, coordinates: coords };
-    } catch (error) {
-      console.error("Geocoding failed:", error);
-      toast({
-        title: "Geocoding Failed",
-        description: "Could not find coordinates for the address. Please check the address and try again.",
-        variant: "destructive"
-      });
-      setIsGeocoding(false);
-      return null;
-    }
+  // Handlers for Home Address
+  const handleUpdateHomeAddress = () => {
+    dispatch({ type: 'UPDATE_HOME_ADDRESS', payload: homeAddressForm });
+    setEditingHomeAddress(false);
+    toast({ title: 'Home address updated!' });
   }
-
-  const handleAddStop = async () => {
-    const newStopData = await processStop(stopFormState);
-    if (newStopData) {
-      dispatch({ type: "ADD_STOP", payload: { stop: newStopData } });
-      setStopFormState(initialStopFormState);
-      setIsAdding(false);
-    }
-  };
-  
-  const handleUpdateStop = async (id: string) => {
-    const updatedStopData = await processStop(stopFormState);
-    if (updatedStopData) {
-      dispatch({ type: "UPDATE_STOP", payload: { id, ...updatedStopData } as Stop });
-      setEditingStopId(null);
-      setStopFormState(initialStopFormState);
-    }
-  };
-
-  const handleEditClick = (stop: Stop) => {
-    setEditingStopId(stop.id);
-    const { id, imageGallery, ...editableStop } = stop;
-    setStopFormState(editableStop);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingStopId(null);
-    setIsAdding(false);
-    setStopFormState(initialStopFormState);
-  };
-
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-     if (name.startsWith("contact.")) {
-        const field = name.split('.')[1];
-        setStopFormState(prev => ({ ...prev, contact: { ...prev.contact, [field]: value } }));
-    } else if (name.startsWith("coordinates.")) {
-        const field = name.split('.')[1] as 'latitude' | 'longitude';
-        setStopFormState(prev => ({ ...prev, coordinates: { ...prev.coordinates, [field]: parseFloat(value) } }));
-    }
-     else {
-        setStopFormState(prev => ({ ...prev, [name]: value }));
-    }
-  };
 
   // Handlers for Reasons
   const handleAddReason = () => {
@@ -136,6 +69,7 @@ export default function SettingsPage() {
         stops,
         reasons,
         successfulReasons,
+        homeAddress,
     };
     const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
       JSON.stringify(settingsData, null, 2)
@@ -160,12 +94,8 @@ export default function SettingsPage() {
             }
             const importedState = JSON.parse(text);
             
-            // Validate imported data structure
-            const hasStops = Array.isArray(importedState.stops);
-            const hasReasons = Array.isArray(importedState.reasons);
-            const hasSuccessfulReasons = Array.isArray(importedState.successfulReasons);
-
-            if (hasStops || hasReasons || hasSuccessfulReasons) {
+            // Basic validation
+            if (importedState) {
                  dispatch({ type: 'HYDRATE_STATE', payload: importedState });
                  toast({ title: "Settings Imported", description: "Your settings have been successfully loaded." });
             } else {
@@ -184,47 +114,6 @@ export default function SettingsPage() {
     reader.readAsText(file);
   };
 
-
-  const renderStopForm = (isEditing: boolean) => (
-    <Card className="col-span-full">
-        <CardHeader>
-            <CardTitle>{isEditing ? 'Edit Stop' : 'Add New Stop'}</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Object.keys(stopFormState).filter(k => k !== 'coordinates').map(key => {
-                const fieldKey = key as keyof Omit<Stop, 'id' | 'imageGallery' | 'coordinates'>;
-                if (typeof stopFormState[fieldKey] === 'object') {
-                    if (fieldKey === 'contact') {
-                        return Object.keys(stopFormState.contact).map(contactKey => (
-                            <div className="space-y-2" key={`contact-${contactKey}`}>
-                                <Label htmlFor={`contact.${contactKey}`}>Contact {contactKey.charAt(0).toUpperCase() + contactKey.slice(1)}</Label>
-                                <Input id={`contact.${contactKey}`} name={`contact.${contactKey}`} value={stopFormState.contact[contactKey as keyof typeof stopFormState.contact]} onChange={handleFormChange} disabled={isGeocoding}/>
-                            </div>
-                        ));
-                    }
-                    return null;
-                }
-                return (
-                    <div className="space-y-2" key={fieldKey}>
-                        <Label htmlFor={fieldKey}>{fieldKey.split(/(?=[A-Z])/).join(" ")}</Label>
-                        <Input id={fieldKey} name={fieldKey} value={stopFormState[fieldKey]} onChange={handleFormChange} disabled={isGeocoding} />
-                    </div>
-                );
-            })}
-        </CardContent>
-        <CardContent>
-            <div className="flex gap-2 justify-end">
-                <Button variant="ghost" onClick={handleCancelEdit} disabled={isGeocoding}><X className="h-5 w-5 mr-2"/>Cancel</Button>
-                <Button onClick={() => isEditing ? handleUpdateStop(editingStopId!) : handleAddStop()} disabled={isGeocoding}>
-                  {isGeocoding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  <Save className="h-5 w-5 mr-2"/>
-                  {isEditing ? 'Save Changes' : 'Add Stop'}
-                </Button>
-            </div>
-        </CardContent>
-    </Card>
-  );
-
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
     <div className="container mx-auto p-4 md:p-8">
@@ -237,66 +126,78 @@ export default function SettingsPage() {
             <h1 className="text-3xl font-bold">Settings</h1>
         </div>
         
-        <Card className="mb-8">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+        
+        <Card className="md:col-span-1 lg:col-span-3">
             <CardHeader>
-                <CardTitle>Import & Export Data</CardTitle>
-                <CardDescription>Save your settings to a file or load settings from a backup.</CardDescription>
+                <CardTitle>Global Settings</CardTitle>
+                <CardDescription>Manage application-wide configurations.</CardDescription>
             </CardHeader>
-            <CardContent className="flex gap-4">
-                 <input type="file" ref={importInputRef} onChange={handleImport} accept="application/json" className="hidden" />
-                 <Button onClick={() => importInputRef.current?.click()} variant="outline"><Upload className="mr-2 h-5 w-5"/> Import Settings</Button>
-                 <Button onClick={handleExport}><Download className="mr-2 h-5 w-5"/> Export All Settings</Button>
+            <CardContent className="space-y-6">
+                <div className="p-4 border rounded-lg">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <Label htmlFor="homeAddress" className="flex items-center gap-2 font-semibold"><Home size={16}/> Home Address</Label>
+                            {editingHomeAddress ? (
+                                <Input 
+                                    id="homeAddress" 
+                                    value={homeAddressForm}
+                                    onChange={(e) => setHomeAddressForm(e.target.value)}
+                                    className="mt-2"
+                                />
+                            ) : (
+                                <p className="text-muted-foreground mt-2">{homeAddress}</p>
+                            )}
+                        </div>
+                        {editingHomeAddress ? (
+                            <div className="flex gap-2">
+                                <Button size="icon" variant="ghost" onClick={() => { setEditingHomeAddress(false); setHomeAddressForm(homeAddress); }}><X className="h-5 w-5"/></Button>
+                                <Button size="icon" variant="default" onClick={handleUpdateHomeAddress}><Save className="h-5 w-5"/></Button>
+                            </div>
+                        ) : (
+                            <Button size="icon" variant="ghost" onClick={() => setEditingHomeAddress(true)}><Edit className="h-5 w-5"/></Button>
+                        )}
+                    </div>
+                </div>
+
+                <div>
+                    <h4 className="font-semibold mb-2">Import & Export Data</h4>
+                    <p className="text-sm text-muted-foreground mb-4">Save your settings to a file or load settings from a backup.</p>
+                    <div className="flex gap-4">
+                        <input type="file" ref={importInputRef} onChange={handleImport} accept="application/json" className="hidden" />
+                        <Button onClick={() => importInputRef.current?.click()} variant="outline"><Upload className="mr-2 h-5 w-5"/> Import</Button>
+                        <Button onClick={handleExport}><Download className="mr-2 h-5 w-5"/> Export</Button>
+                    </div>
+                </div>
             </CardContent>
         </Card>
-
-
-      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-        
-        {isAdding && renderStopForm(false)}
-        {editingStopId && !isAdding && renderStopForm(true)}
         
         <Card className="lg:col-span-3">
           <CardHeader>
             <div className="flex justify-between items-center">
                 <div>
                     <CardTitle>Manage Locations</CardTitle>
-                    <CardDescription>Add, edit, and reorder service stops.</CardDescription>
+                    <CardDescription>View predefined service stops. Adding new stops is not supported in this version.</CardDescription>
                 </div>
-                 <div className="flex items-center gap-2">
-                    <Button onClick={() => setIsAdding(true)}><PlusCircle className="h-5 w-5"/></Button>
-                 </div>
             </div>
           </CardHeader>
           <CardContent>
-             <Droppable droppableId="stops" type="stops">
-                {(provided) => (
-                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
-                    {stops.map((stop, index) => (
-                        <Draggable key={stop.id} draggableId={stop.id} index={index}>
-                        {(provided, snapshot) => (
-                          <div ref={provided.innerRef} {...provided.draggableProps} className={`p-3 bg-secondary/50 rounded-lg ${snapshot.isDragging ? 'shadow-lg' : ''}`}>
-                            <div className="flex justify-between items-start">
-                                <div className="flex items-center gap-2">
-                                    <button {...provided.dragHandleProps} className="p-1"><GripVertical className="h-5 w-5 text-muted-foreground" /></button>
-                                    <div>
-                                        <p className="font-semibold">{stop.propertyName}</p>
-                                        <p className="text-sm text-muted-foreground">{stop.address}</p>
-                                        <p className="text-sm text-muted-foreground italic pl-2">↳ {stop.screenLocation}</p>
-                                    </div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <Button size="icon" variant="ghost" onClick={() => handleEditClick(stop)}><Edit className="h-5 w-5"/></Button>
-                                    <Button size="icon" variant="ghost" onClick={() => dispatch({ type: "DELETE_STOP", payload: stop.id })}><Trash2 className="h-5 w-5 text-destructive"/></Button>
+             <div className="space-y-2">
+                {stops.map((stop) => (
+                    <div key={stop.id} className="p-3 bg-secondary/50 rounded-lg">
+                        <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-2">
+                                <div className="p-1"><GripVertical className="h-5 w-5 text-muted-foreground" /></div>
+                                <div>
+                                    <p className="font-semibold">{stop.propertyName}</p>
+                                    <p className="text-sm text-muted-foreground">{stop.address}</p>
+                                    <p className="text-sm text-muted-foreground italic pl-2">↳ {stop.screenLocation}</p>
                                 </div>
                             </div>
-                           </div>
-                        )}
-                        </Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-            </Droppable>
+                        </div>
+                       </div>
+                ))}
+              </div>
           </CardContent>
         </Card>
 
@@ -394,5 +295,3 @@ export default function SettingsPage() {
     </DragDropContext>
   );
 }
-
-    

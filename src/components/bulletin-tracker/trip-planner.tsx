@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -13,30 +14,24 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
+import { useSettings } from "@/hooks/use-settings";
 
 type PredictionOutput = AIPredictionOutput | RealTimePredictionOutput;
 
 function TrafficPredictor() {
-    const { state } = useTrip();
-    const { itinerary, currentLocation } = state;
+    const { state: tripState } = useTrip();
+    const { state: settingsState } = useSettings();
+    const { itinerary } = tripState;
+    const { homeAddress } = settingsState;
     const { toast } = useToast();
 
     const [isLoading, setIsLoading] = useState(false);
     const [prediction, setPrediction] = useState<PredictionOutput | null>(null);
-    const [departureTime, setDepartureTime] = useState("9:00 AM");
+    const [departureTime, setDepartureTime] = useState("09:00"); // Use 24-hour format for input type="time"
     const [useRealTime, setUseRealTime] = useState(false);
 
 
     const handlePrediction = async () => {
-        if (!currentLocation && useRealTime) {
-            toast({
-                title: "Current Location Unknown",
-                description: "Cannot make a live prediction without your current location.",
-                variant: "destructive",
-            });
-            return;
-        }
-
         setIsLoading(true);
         setPrediction(null);
         try {
@@ -45,12 +40,12 @@ function TrafficPredictor() {
 
             if (useRealTime) {
                 result = await predictRealTimeTravelTime({
-                    startAddress: "My Current Location", // Can be more specific if needed
+                    startAddress: homeAddress,
                     endAddress: firstStop.address,
                 });
             } else {
                 result = await predictTravelTime({
-                    startAddress: "My Current Location",
+                    startAddress: homeAddress,
                     endAddress: firstStop.address,
                     departureTime: departureTime,
                 });
@@ -91,7 +86,7 @@ function TrafficPredictor() {
             </CardHeader>
             <CardContent className="space-y-4">
                  <p className="text-sm text-muted-foreground">
-                    Estimate travel time to your first stop (<span className="font-semibold">{itinerary[0].propertyName}</span>). 
+                    Estimate travel time from your home address to your first stop (<span className="font-semibold">{itinerary[0].propertyName}</span>). 
                     Use AI for a general estimate or Live Traffic for real-time data.
                 </p>
                 {!useRealTime && (
@@ -106,7 +101,7 @@ function TrafficPredictor() {
                     </div>
                 )}
                 <Button onClick={handlePrediction} disabled={isLoading} className="w-full">
-                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="mr-2 h-4 w-4" />}
                     {useRealTime ? "Get Live Travel Time" : "Get AI Estimate"}
                 </Button>
                 {prediction && (
