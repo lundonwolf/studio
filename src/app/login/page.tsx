@@ -45,11 +45,26 @@ export default function LoginPage() {
       }
       router.push("/");
     } catch (error: any) {
-      console.error(`${action} error`, error);
+      console.error(`${action} error`, error.code, error.message);
+      let description = "An unexpected error occurred. Please try again.";
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          description = "This email is already in use. Please try logging in.";
+          break;
+        case 'auth/wrong-password':
+        case 'auth/user-not-found':
+          description = "Invalid email or password. Please try again.";
+          break;
+        case 'auth/weak-password':
+          description = 'The password is too weak. Please use at least 6 characters.';
+          break;
+        default:
+          description = error.message;
+      }
       toast({
         variant: "destructive",
         title: `${action.charAt(0).toUpperCase() + action.slice(1)} Failed`,
-        description: error.message,
+        description,
       });
     } finally {
       setIsLoading(false);
@@ -154,7 +169,7 @@ export default function LoginPage() {
                 Sign Up
               </Button>
             </CardFooter>
-          </Card>
+          </card>
         </TabsContent>
       </Tabs>
       </div>
