@@ -57,24 +57,31 @@ export default function EndOfTripDialog({ isOpen, onOpenChange }: EndOfTripDialo
   });
 
   useEffect(() => {
-    if (isOpen && state.tripStatus === 'active') {
+    if (isOpen && (state.tripStatus === 'active' || state.itinerary.length > 0 && state.activeStopIndex === null)) {
       let totalDistance = 0;
       for (let i = 0; i < state.locationHistory.length - 1; i++) {
         totalDistance += haversineDistance(state.locationHistory[i], state.locationHistory[i+1]);
       }
       form.setValue('mileage', parseFloat(totalDistance.toFixed(2)));
     }
-  }, [isOpen, state.tripStatus, state.locationHistory, form]);
+  }, [isOpen, state.tripStatus, state.activeStopIndex, state.itinerary.length, state.locationHistory, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!state.tripStartTime) {
-      toast({ title: "Trip start time not found.", variant: "destructive" });
-      return;
+      toast({ title: "Trip start time not found.", description: "This can happen if you completed the trip in a previous session.", variant: "destructive" });
+      // We can still generate a report without a start time, just can't calculate hours.
     }
     
     setIsLoading(true);
     try {
-        const totalHoursWorked = (new Date().getTime() - state.tripStartTime.getTime()) / (1000 * 60 * 60);
+        let totalHoursWorked = 0;
+        if(state.tripStartTime){
+            const endTime = state.history.reduce((latest, event) => {
+                return event.timeOut && event.timeOut > latest ? event.timeOut : latest
+            }, new Date(0));
+            const finalEndTime = endTime.getTime() > 0 ? endTime : new Date();
+            totalHoursWorked = (finalEndTime.getTime() - state.tripStartTime.getTime()) / (1000 * 60 * 60);
+        }
 
         const completedStops = state.history.filter(event => event.timeOut).map(event => {
           const stop = state.itinerary.find(s => s.id === event.stopId);
@@ -137,7 +144,7 @@ export default function EndOfTripDialog({ isOpen, onOpenChange }: EndOfTripDialo
                 <FormItem>
                   <FormLabel>Total Mileage (auto-calculated)</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="e.g., 55" {...field} />
+                    <Input type="number" step="0.1" placeholder="e.g., 55" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

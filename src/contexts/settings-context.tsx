@@ -2,7 +2,7 @@
 
 import { createContext, useReducer, ReactNode, Dispatch, useEffect } from "react";
 import type { Stop, CheckoutReason } from "@/lib/types";
-import { availableStops } from "@/lib/data";
+import { availableStops as defaultStops } from "@/lib/data";
 import { defaultReasons, defaultSuccessfulReasons } from "@/lib/reasons";
 
 type State = {
@@ -16,11 +16,14 @@ type Action =
   | { type: "DELETE_REASON"; payload: string }
   | { type: "ADD_SUCCESSFUL_REASON"; payload: { text: string } }
   | { type: "DELETE_SUCCESSFUL_REASON"; payload: string }
-  | { type: "HYDRATE_STATE"; payload: State }
-  | { type: "REORDER_ITEMS"; payload: { type: 'reasons' | 'successfulReasons'; sourceIndex: number; destinationIndex: number }};
+  | { type: "HYDRATE_STATE"; payload: Partial<State> }
+  | { type: "REORDER_ITEMS"; payload: { type: 'reasons' | 'successfulReasons' | 'stops'; sourceIndex: number; destinationIndex: number }}
+  | { type: "ADD_STOP"; payload: Omit<Stop, 'id'> }
+  | { type: "UPDATE_STOP"; payload: Stop }
+  | { type: "DELETE_STOP"; payload: string };
 
 const defaultState: State = {
-  stops: availableStops,
+  stops: defaultStops,
   reasons: defaultReasons,
   successfulReasons: defaultSuccessfulReasons,
 };
@@ -60,6 +63,24 @@ function settingsReducer(state: State, action: Action): State {
       list.splice(destinationIndex, 0, removed);
       return { ...state, [type]: list };
     }
+    case 'ADD_STOP': {
+      const newStop: Stop = {
+        id: `stop-${Date.now()}`,
+        ...action.payload,
+      };
+      return { ...state, stops: [...state.stops, newStop] };
+    }
+    case 'UPDATE_STOP': {
+      return {
+        ...state,
+        stops: state.stops.map(stop => stop.id === action.payload.id ? action.payload : stop),
+      };
+    }
+    case 'DELETE_STOP':
+      return {
+        ...state,
+        stops: state.stops.filter(stop => stop.id !== action.payload),
+      };
     default:
       return state;
   }
@@ -78,10 +99,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       const storedState = localStorage.getItem(SETTINGS_STORAGE_KEY);
       if (storedState) {
         const loadedState = JSON.parse(storedState);
-        // We don't want to load stops from local storage, as they are now static.
-        // We only load reasons.
         const stateToHydrate = {
             ...defaultState,
+            stops: loadedState.stops || defaultState.stops,
             reasons: loadedState.reasons || defaultState.reasons,
             successfulReasons: loadedState.successfulReasons || defaultState.successfulReasons,
         }
@@ -95,9 +115,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   // Save state to localStorage whenever it changes
   useEffect(() => {
     try {
-      // We don't save stops to local storage anymore.
-      const { stops, ...stateToSave } = state;
-      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(stateToSave));
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(state));
     } catch (error) {
       console.error("Failed to save settings to localStorage", error);
     }

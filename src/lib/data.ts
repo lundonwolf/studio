@@ -32,10 +32,14 @@ export const availableStops: Stop[] = [
       email: 'jane.doe@maplecreek.com',
       phone: '555-987-6543',
     },
+    macAddress: '00:1B:44:11:3A:B8',
     screenId: 'MAP-REC-01',
     wifiSsid: 'MapleCreekWiFi',
     wifiPassword: 'password123',
     techInstructions: 'Requires special remote (ask front desk). Verify remote connectivity.',
+    imageGallery: [
+        'https://picsum.photos/seed/4/600/400',
+    ],
     coordinates: { latitude: 39.7900, longitude: -89.6445 },
   },
   {
@@ -48,9 +52,13 @@ export const availableStops: Stop[] = [
       email: 'p.jones@willowtowers.com',
       phone: '555-222-3333',
     },
+    macAddress: '00:1B:44:11:3A:B9',
     screenId: 'WILLOW-ELEV-01',
     wifiSsid: 'WillowGuest',
     techInstructions: 'Needs a firmware update. Follow SOP-FW-03.',
+    imageGallery: [
+         'https://picsum.photos/seed/5/600/400',
+    ],
     coordinates: { latitude: 39.7750, longitude: -89.6600 },
   },
   {
@@ -63,10 +71,12 @@ export const availableStops: Stop[] = [
       email: 'mary.w@pineridge.com',
       phone: '555-444-5555',
     },
+    macAddress: '00:1B:44:11:3A:C1',
     screenId: 'PINE-GATE-01',
     wifiSsid: 'PineRidgeSecure',
     wifiPassword: 'securepassword',
     techInstructions: 'Check for weather damage to enclosure.',
+    imageGallery: [],
     coordinates: { latitude: 39.8011, longitude: -89.6587 },
   },
 ];

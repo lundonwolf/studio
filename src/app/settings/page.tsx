@@ -6,29 +6,86 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, PlusCircle, ArrowLeft, Download, GripVertical } from "lucide-react";
+import { Trash2, PlusCircle, ArrowLeft, Download, GripVertical, Edit, Save, X } from "lucide-react";
 import type { CheckoutReason, Stop } from '@/lib/types';
 import Link from 'next/link';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+
+const initialStopFormState = {
+    propertyName: "",
+    address: "",
+    screenLocation: "",
+    contact: { name: "", email: "", phone: "" },
+    screenId: "",
+    wifiSsid: "",
+    wifiPassword: "",
+    macAddress: "",
+    techInstructions: "",
+    coordinates: { latitude: 0, longitude: 0 },
+};
 
 export default function SettingsPage() {
   const { state, dispatch } = useSettings();
   const { stops, reasons, successfulReasons } = state;
 
+  // Stop state
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingStopId, setEditingStopId] = useState<string | null>(null);
+  const [stopFormState, setStopFormState] = useState<Omit<Stop, 'id' | 'imageGallery'>>(initialStopFormState);
+
   // Reasons state
   const [newReason, setNewReason] = useState("");
   const [newSuccessfulReason, setNewSuccessfulReason] = useState("");
-
+  
   const handleDragEnd = (result: DropResult) => {
     const { source, destination, type } = result;
 
     if (!destination || (source.droppableId === destination.droppableId && source.index === destination.index)) {
       return;
     }
-
-    const itemType = type as 'reasons' | 'successfulReasons';
+    
+    const itemType = type as 'stops' | 'reasons' | 'successfulReasons';
     dispatch({ type: 'REORDER_ITEMS', payload: { type: itemType, sourceIndex: source.index, destinationIndex: destination.index } });
   };
+  
+  // Handlers for Stops
+  const handleAddStop = () => {
+    dispatch({ type: "ADD_STOP", payload: stopFormState });
+    setStopFormState(initialStopFormState);
+    setIsAdding(false);
+  };
+  
+  const handleUpdateStop = (id: string) => {
+    dispatch({ type: "UPDATE_STOP", payload: { id, ...stopFormState } });
+    setEditingStopId(null);
+    setStopFormState(initialStopFormState);
+  };
+
+  const handleEditClick = (stop: Stop) => {
+    setEditingStopId(stop.id);
+    const { id, imageGallery, ...editableStop } = stop;
+    setStopFormState(editableStop);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingStopId(null);
+    setIsAdding(false);
+    setStopFormState(initialStopFormState);
+  };
+
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    if (name.startsWith("contact.")) {
+        const field = name.split('.')[1];
+        setStopFormState(prev => ({ ...prev, contact: { ...prev.contact, [field]: value } }));
+    } else if (name.startsWith("coordinates.")) {
+        const field = name.split('.')[1];
+        setStopFormState(prev => ({ ...prev, coordinates: { ...prev.coordinates, [field]: parseFloat(value) || 0 } }));
+    } else {
+        setStopFormState(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
 
   // Handlers for Reasons
   const handleAddReason = () => {
@@ -55,6 +112,50 @@ export default function SettingsPage() {
     link.click();
   };
 
+  const renderStopForm = (isEditing: boolean) => (
+    <Card className="col-span-full">
+        <CardHeader>
+            <CardTitle>{isEditing ? 'Edit Stop' : 'Add New Stop'}</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Object.keys(stopFormState).map(key => {
+                const fieldKey = key as keyof Omit<Stop, 'id' | 'imageGallery'>;
+                if (typeof stopFormState[fieldKey] === 'object') {
+                    if (fieldKey === 'contact') {
+                        return Object.keys(stopFormState.contact).map(contactKey => (
+                            <div className="space-y-2" key={`contact-${contactKey}`}>
+                                <Label htmlFor={`contact.${contactKey}`}>Contact {contactKey}</Label>
+                                <Input id={`contact.${contactKey}`} name={`contact.${contactKey}`} value={stopFormState.contact[contactKey as keyof typeof stopFormState.contact]} onChange={handleFormChange} />
+                            </div>
+                        ));
+                    }
+                    if (fieldKey === 'coordinates') {
+                         return Object.keys(stopFormState.coordinates).map(coordKey => (
+                            <div className="space-y-2" key={`coord-${coordKey}`}>
+                                <Label htmlFor={`coordinates.${coordKey}`}>{coordKey.charAt(0).toUpperCase() + coordKey.slice(1)}</Label>
+                                <Input id={`coordinates.${coordKey}`} name={`coordinates.${coordKey}`} type="number" step="any" value={stopFormState.coordinates[coordKey as keyof typeof stopFormState.coordinates]} onChange={handleFormChange} />
+                            </div>
+                        ));
+                    }
+                    return null;
+                }
+                return (
+                    <div className="space-y-2" key={fieldKey}>
+                        <Label htmlFor={fieldKey}>{fieldKey.split(/(?=[A-Z])/).join(" ")}</Label>
+                        <Input id={fieldKey} name={fieldKey} value={stopFormState[fieldKey]} onChange={handleFormChange} />
+                    </div>
+                );
+            })}
+        </CardContent>
+        <CardContent>
+            <div className="flex gap-2 justify-end">
+                <Button variant="ghost" onClick={handleCancelEdit}><X className="h-5 w-5 mr-2"/>Cancel</Button>
+                <Button onClick={() => isEditing ? handleUpdateStop(editingStopId!) : handleAddStop()}><Save className="h-5 w-5 mr-2"/>{isEditing ? 'Save Changes' : 'Add Stop'}</Button>
+            </div>
+        </CardContent>
+    </Card>
+  );
+
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
     <div className="container mx-auto p-4 md:p-8">
@@ -68,33 +169,56 @@ export default function SettingsPage() {
         </div>
 
       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+        
+        {isAdding && renderStopForm(false)}
+        {editingStopId && !isAdding && renderStopForm(true)}
+        
         {/* Manage Locations */}
-        <Card className="lg:col-span-1">
+        <Card className="lg:col-span-3">
           <CardHeader>
             <div className="flex justify-between items-center">
                 <div>
                     <CardTitle>Manage Locations</CardTitle>
-                    <CardDescription>View service stops. New stops must be added to the code.</CardDescription>
+                    <CardDescription>Add, edit, and reorder service stops.</CardDescription>
                 </div>
-                 <Button variant="outline" size="icon" onClick={() => exportData(stops, "bulletin-tracker-locations.json")}>
-                    <Download className="h-5 w-5" />
-                 </Button>
+                 <div className="flex items-center gap-2">
+                    <Button onClick={() => setIsAdding(true)}><PlusCircle className="h-5 w-5"/></Button>
+                    <Button variant="outline" size="icon" onClick={() => exportData(stops, "bulletin-tracker-locations.json")}>
+                        <Download className="h-5 w-5" />
+                    </Button>
+                 </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-              <div>
-                {stops.map((stop) => (
-                    <div key={stop.id} className="p-3 bg-secondary/50 rounded-lg space-y-2 mb-2">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <p className="font-semibold">{stop.propertyName}</p>
-                                <p className="text-sm text-muted-foreground">{stop.address}</p>
-                                <p className="text-sm text-muted-foreground italic pl-2">↳ {stop.screenLocation}</p>
+          <CardContent>
+             <Droppable droppableId="stops" type="stops">
+                {(provided) => (
+                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
+                    {stops.map((stop, index) => (
+                        <Draggable key={stop.id} draggableId={stop.id} index={index}>
+                        {(provided, snapshot) => (
+                          <div ref={provided.innerRef} {...provided.draggableProps} className={`p-3 bg-secondary/50 rounded-lg ${snapshot.isDragging ? 'shadow-lg' : ''}`}>
+                            <div className="flex justify-between items-start">
+                                <div className="flex items-center gap-2">
+                                    <button {...provided.dragHandleProps} className="p-1"><GripVertical className="h-5 w-5 text-muted-foreground" /></button>
+                                    <div>
+                                        <p className="font-semibold">{stop.propertyName}</p>
+                                        <p className="text-sm text-muted-foreground">{stop.address}</p>
+                                        <p className="text-sm text-muted-foreground italic pl-2">↳ {stop.screenLocation}</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button size="icon" variant="ghost" onClick={() => handleEditClick(stop)}><Edit className="h-5 w-5"/></Button>
+                                    <Button size="icon" variant="ghost" onClick={() => dispatch({ type: "DELETE_STOP", payload: stop.id })}><Trash2 className="h-5 w-5 text-destructive"/></Button>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                ))}
-              </div>
+                           </div>
+                        )}
+                        </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+            </Droppable>
           </CardContent>
         </Card>
 
